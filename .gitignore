@@ -1,7 +1,42 @@
-﻿backend/node_modules/
+﻿# Dependencies
+node_modules/
+backend/node_modules/
 frontend/node_modules/
-dist/
+
+# Python
+backend/venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables (IMPORTANT - contains secrets!)
 .env
+backend/.env
+
+# Uploads and generated files
+backend/uploads/
+*.wav
+*.webm
+*.mp3
+
+# Build outputs
+frontend/dist/
+dist/
+
+# IDE
 .vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
 npm-debug.log
 yarn-error.log
+
+# Whisper models (large files)
+*.pt
+*.bin

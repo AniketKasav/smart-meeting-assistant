@@ -1,0 +1,6 @@
+﻿{
+  "audio_file": "C:\\Users\\anike\\Desktop\\smart-meeting-assistant2\\backend\\uploads\\123\\Aniket\\combined.wav",
+  "duration": null,
+  "transcript": [],
+  "error": "No module named 'whisper'"
+}
