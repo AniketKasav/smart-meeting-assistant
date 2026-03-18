@@ -1,47 +1,77 @@
-﻿# Dependencies
+﻿# ======================
+# Node Modules
+# ======================
 node_modules/
 backend/node_modules/
 frontend/node_modules/
 
+# ======================
 # Python
+# ======================
+venv/
+.venv/
 backend/venv/
 __pycache__/
 *.pyc
 *.pyo
 
-# Environment variables (IMPORTANT - contains secrets!)
+# ======================
+# Environment Variables (Secrets)
+# ======================
 .env
-backend/.env
 *.env
 
-# 🔐 Secrets (VERY IMPORTANT)
+# ======================
+# Sensitive Files
+# ======================
 backend/google-tokens.json
-*.json
 
-# Uploads and generated files
+# ======================
+# Uploads & Media
+# ======================
 backend/uploads/
 *.wav
 *.webm
 *.mp3
 
-# Build outputs
-frontend/dist/
+# ======================
+# ML Models (Large Files)
+# ======================
+*.pt
+*.bin
+vosk-model-small-en-us-0.15/
+
+# ======================
+# Build Files
+# ======================
 dist/
+frontend/dist/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-
-# OS files
-.DS_Store
-Thumbs.db
-
+# ======================
 # Logs
+# ======================
 *.log
 npm-debug.log
 yarn-error.log
 
-# Models (large files)
-*.pt
-*.bin
+# ======================
+# Cache & Temp
+# ======================
+.cache/
+*.cache
+tmp/
+temp/
+*.tmp
+
+# ======================
+# IDE / Editor
+# ======================
+.vscode/
+.idea/
+*.swp
+
+# ======================
+# OS Files
+# ======================
+.DS_Store
+Thumbs.db
