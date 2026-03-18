@@ -1,94 +1,141 @@
-// backend/models/Meeting.js
+// backend/models/Meeting.js - FIXED VERSION
 const mongoose = require('mongoose');
 
-const participantSchema = new mongoose.Schema({
-  userId: { type: String, required: true },
-  name: { type: String, required: true },
-  role: { type: String, default: 'participant' }, // 'host', 'participant'
-  joinedAt: { type: Date, default: Date.now },
-  audioPath: String, // path to user's combined audio
-  transcriptPath: String, // path to user's transcript
-});
-
 const meetingSchema = new mongoose.Schema({
-  meetingId: { 
-    type: String, 
-    required: true, 
+  meetingId: {
+    type: String,
+    required: true,
     unique: true,
-    index: true 
+    index: true
   },
-  title: { 
-    type: String, 
-    default: 'Untitled Meeting' 
+  title: {
+    type: String,
+    default: 'Untitled Meeting'
   },
   description: String,
+  scheduledDate: String,
+  scheduledTime: String,
+  // ✅ FIXED: Added owner field
   owner: {
     userId: String,
     name: String
   },
-  participants: [participantSchema],
-  status: { 
-    type: String, 
+  // ✅ FIXED: Added audioPath and transcriptPath
+  participants: [{
+    userId: String,
+    name: String,
+    joinedAt: Date,
+    audioPath: String,
+    transcriptPath: String
+  }],
+  status: {
+    type: String,
     enum: ['scheduled', 'in-progress', 'completed', 'archived'],
-    default: 'scheduled'
+    default: 'in-progress'
   },
-  settings: {
-    recording: { type: Boolean, default: true },
-    autoTranscribe: { type: Boolean, default: true },
-    recordingFormat: { type: String, default: 'wav' }
+  // ✅ FIXED: Changed from startTime/endTime to startedAt/endedAt
+  startedAt: {
+    type: Date,
+    default: Date.now
   },
-  duration: Number, // in seconds
-  startedAt: Date,
   endedAt: Date,
+  duration: Number, // in seconds
+  audioFormat: {
+    type: String,
+    enum: ['wav', 'webm'],
+    default: 'wav'
+  },
+  audioPath: String,
+  transcriptPath: String,
+  
+  // Auto-generated sentiment (runs automatically after transcription)
+  autoSentiment: {
+    sentiment: {
+      type: String,
+      enum: ['positive', 'neutral', 'negative'],
+      default: 'neutral'
+    },
+    confidence: Number,
+    reason: String,
+    analyzedAt: Date,
+    model: String
+  },
+  
+  // AI-Generated Summary (only when user clicks "Generate Summary")
   summary: {
-    text: String,
+    text: String,                    // Executive summary
     generatedAt: Date,
+    model: String,                   // AI model used (e.g., 'llama3.2')
+    keyPoints: [String],             // Key discussion points
+    decisions: [String],             // Decisions made
     actionItems: [{
       title: String,
       description: String,
-      assignee: String,
+      assignee: {
+        type: String,
+        default: 'Unassigned'
+      },
       dueDate: Date,
-      status: { type: String, default: 'open' }, // 'open', 'completed'
-      createdAt: { type: Date, default: Date.now }
+      status: {
+        type: String,
+        enum: ['open', 'in-progress', 'completed'],
+        default: 'open'
+      },
+      priority: {
+        type: String,
+        enum: ['high', 'medium', 'low'],
+        default: 'medium'
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now
+      }
     }],
-    keyTopics: [String],
-    sentiment: String // 'positive', 'neutral', 'negative'
+    topics: [String],                // Keywords/tags
+    sentiment: {
+      type: String,
+      enum: ['positive', 'neutral', 'negative'],
+      default: 'neutral'
+    },
+    nextSteps: [String],             // Suggested next steps
+    customPrompt: String             // If regenerated with custom prompt
   },
+  
+  // Analytics (for Phase 2)
   analytics: {
     totalWords: Number,
-    speakingTime: Map, // userId -> seconds
-    turnsCount: Map, // userId -> number of speaking turns
-    fillerWordsCount: Map, // userId -> count
+    speakingTime: Map,               // userId -> seconds
+    turnsCount: Map,                 // userId -> number of turns
+    fillerWordsCount: Map,           // userId -> filler count
+    averageWPM: Map,                 // userId -> words per minute
+    dominanceScore: Map              // userId -> participation score (0-100)
   }
 }, {
-  timestamps: true // adds createdAt and updatedAt
+  timestamps: true
 });
 
-// Indexes for faster queries
-meetingSchema.index({ 'owner.userId': 1, createdAt: -1 });
-meetingSchema.index({ status: 1, createdAt: -1 });
-meetingSchema.index({ 'participants.userId': 1 });
-
-// Methods
-meetingSchema.methods.addParticipant = function(userId, name, role = 'participant') {
-  const existing = this.participants.find(p => p.userId === userId);
-  if (!existing) {
-    this.participants.push({ userId, name, role });
+// ✅ FIXED: Added addParticipant method
+meetingSchema.methods.addParticipant = function(userId, userName) {
+  const exists = this.participants.some(p => p.userId === userId);
+  
+  if (!exists) {
+    this.participants.push({
+      userId,
+      name: userName,
+      joinedAt: new Date()
+    });
+    return this.save();
   }
-  return this.save();
+  
+  return Promise.resolve(this);
 };
 
-meetingSchema.methods.updateStatus = function(newStatus) {
-  this.status = newStatus;
-  if (newStatus === 'in-progress' && !this.startedAt) {
-    this.startedAt = new Date();
-  } else if (newStatus === 'completed' && !this.endedAt) {
-    this.endedAt = new Date();
-    if (this.startedAt) {
-      this.duration = Math.floor((this.endedAt - this.startedAt) / 1000);
-    }
-  }
-  return this.save();
-};
+// Index for search
+meetingSchema.index({ 
+  title: 'text', 
+  'summary.text': 'text',
+  'summary.keyPoints': 'text',
+  'summary.topics': 'text'
+});
 
 module.exports = mongoose.model('Meeting', meetingSchema);

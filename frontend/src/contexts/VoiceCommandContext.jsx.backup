@@ -1,0 +1,235 @@
+import { createContext, useContext, useState, useCallback } from 'react';
+import { intentMatcher } from '../utils/intentMatcher';
+import { actionExecutor } from '../utils/actionExecutor';
+import aiAssistantService from '../services/aiAssistantService';
+
+const VoiceCommandContext = createContext();
+
+export const useVoiceCommand = () => {
+  const context = useContext(VoiceCommandContext);
+  if (!context) {
+    throw new Error('useVoiceCommand must be used within VoiceCommandProvider');
+  }
+  return context;
+};
+
+export const VoiceCommandProvider = ({ children }) => {
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [lastCommand, setLastCommand] = useState(null);
+  const [commandHistory, setCommandHistory] = useState([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [useAI, setUseAI] = useState(true); // Toggle AI enhancement
+
+  /**
+   * Process voice command with hybrid routing
+   * Try pattern matching first, fall back to AI
+   */
+  const processCommand = useCallback(async (text) => {
+    try {
+      setIsProcessing(true);
+      const normalizedText = text.toLowerCase().trim();
+
+      // STEP 1: Try pattern matching for simple commands
+      const patternMatch = intentMatcher.match(normalizedText);
+
+      if (patternMatch && patternMatch.confidence > 0.8) {
+        // High confidence pattern match - execute directly
+        console.log('✅ Pattern match found:', patternMatch);
+        
+        const result = await actionExecutor.execute(
+          patternMatch.intent,
+          patternMatch.params
+        );
+
+        addToHistory({
+          text,
+          intent: patternMatch.intent,
+          method: 'pattern',
+          success: result.success,
+          timestamp: new Date().toISOString()
+        });
+
+        setLastCommand({
+          text,
+          intent: patternMatch.intent,
+          response: result.message || 'Command executed',
+          success: result.success
+        });
+
+        setIsProcessing(false);
+        return {
+          success: result.success,
+          method: 'pattern',
+          intent: patternMatch.intent,
+          response: result.message
+        };
+      }
+
+      // STEP 2: Command is complex or ambiguous - use AI
+      if (useAI) {
+        console.log('🤖 Routing to AI for processing:', text);
+
+        const aiResult = await aiAssistantService.processMessage(text);
+
+        if (aiResult.success) {
+          // Execute action from AI response
+          if (!aiResult.needsMoreInfo) {
+            const actionResult = await actionExecutor.execute(
+              aiResult.intent,
+              aiResult.params
+            );
+
+            addToHistory({
+              text,
+              intent: aiResult.intent,
+              method: 'ai',
+              success: actionResult.success,
+              timestamp: new Date().toISOString()
+            });
+
+            setLastCommand({
+              text,
+              intent: aiResult.intent,
+              response: aiResult.response,
+              suggestion: aiResult.suggestion,
+              clarification: aiResult.clarification,
+              success: true
+            });
+
+            setIsProcessing(false);
+            return {
+              success: true,
+              method: 'ai',
+              intent: aiResult.intent,
+              response: aiResult.response,
+              suggestion: aiResult.suggestion,
+              clarification: aiResult.clarification
+            };
+          } else {
+            // AI needs more information
+            setLastCommand({
+              text,
+              intent: aiResult.intent,
+              response: aiResult.response,
+              clarification: aiResult.clarification,
+              needsMoreInfo: true,
+              success: true
+            });
+
+            setIsProcessing(false);
+            return {
+              success: true,
+              method: 'ai',
+              needsMoreInfo: true,
+              clarification: aiResult.clarification
+            };
+          }
+        }
+      }
+
+      // STEP 3: Both methods failed
+      setLastCommand({
+        text,
+        intent: 'UNKNOWN',
+        response: 'I didn\'t understand that command. Try saying "help" for available commands.',
+        success: false
+      });
+
+      addToHistory({
+        text,
+        intent: 'UNKNOWN',
+        method: 'none',
+        success: false,
+        timestamp: new Date().toISOString()
+      });
+
+      setIsProcessing(false);
+      return {
+        success: false,
+        error: 'Command not recognized'
+      };
+
+    } catch (error) {
+      console.error('Command processing error:', error);
+      setIsProcessing(false);
+      return {
+        success: false,
+        error: error.message || 'Failed to process command'
+      };
+    }
+  }, [useAI]);
+
+  /**
+   * Add command to history
+   */
+  const addToHistory = useCallback((command) => {
+    setCommandHistory(prev => {
+      const updated = [...prev, command];
+      // Keep only last 20 commands
+      return updated.slice(-20);
+    });
+  }, []);
+
+  /**
+   * Start listening
+   */
+  const startListening = useCallback(() => {
+    setIsListening(true);
+    setTranscript('');
+  }, []);
+
+  /**
+   * Stop listening
+   */
+  const stopListening = useCallback(() => {
+    setIsListening(false);
+  }, []);
+
+  /**
+   * Update transcript
+   */
+  const updateTranscript = useCallback((text) => {
+    setTranscript(text);
+  }, []);
+
+  /**
+   * Toggle AI enhancement
+   */
+  const toggleAI = useCallback(() => {
+    setUseAI(prev => !prev);
+  }, []);
+
+  /**
+   * Clear history
+   */
+  const clearHistory = useCallback(() => {
+    setCommandHistory([]);
+  }, []);
+
+  const value = {
+    // State
+    isListening,
+    transcript,
+    lastCommand,
+    commandHistory,
+    isProcessing,
+    useAI,
+
+    // Methods
+    processCommand,
+    startListening,
+    stopListening,
+    updateTranscript,
+    toggleAI,
+    clearHistory
+  };
+
+  return (
+    <VoiceCommandContext.Provider value={value}>
+      {children}
+    </VoiceCommandContext.Provider>
+  );
+};
+
+export default VoiceCommandContext;

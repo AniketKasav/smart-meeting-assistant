@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
+import axios from 'axios';
+import { Sparkles, ExternalLink, Calendar } from 'lucide-react';
+import AIResponseDisplay from './AIResponseDisplay';
+
+const API_BASE_URL = 'http://localhost:4000';
 
 function AssistantBubble() {
   const [isOpen, setIsOpen] = useState(false);
@@ -9,101 +14,30 @@ function AssistantBubble() {
     {
       from: "bot",
       text:
-        "Hi 👋 I'm your meeting assistant.\n\n" +
-        "You can ask things like:\n" +
-        "• What were my tasks in the last meeting?\n" +
-        "• What did Riya say about backend?\n" +
-        "• Give me a summary of the last meeting.",
+        "Hi 👋 I'm your AI meeting assistant!\n\n" +
+        "I can answer questions like:\n\n" +
+        "👤 **About Participants:**\n" +
+        "• What did [Name] say in the last meeting?\n" +
+        "• What did [Name] mention about [topic]?\n\n" +
+        "✅ **Action Items & Tasks:**\n" +
+        "• What are my action items?\n" +
+        "• What tasks were assigned yesterday?\n" +
+        "• Show action items from last meeting\n\n" +
+        "📅 **Meeting Information:**\n" +
+        "• Summarize yesterday's meeting\n" +
+        "• What was discussed this week?\n" +
+        "• Show meetings from last week\n\n" +
+        "Ask me anything about your meetings!",
+      intent: "GENERAL_HELP",
+      confidence: 1.0,
+      userMessage: "Hello", // Add default user message for welcome message
+      timestamp: new Date().toISOString()
     },
   ]);
+  const [sources, setSources] = useState([]);
+  const [currentUserMessage, setCurrentUserMessage] = useState(""); // ✅ NEW: Track current user message
 
   const messagesEndRef = useRef(null);
-
-  // Fake demo data (later this will come from backend / database)
-  const lastMeetingSummary =
-    "Last meeting was about sprint planning and backend integration. " +
-    "Tasks were assigned for API work, analytics UI, and documentation.";
-
-  const fakeTasks = [
-    "You: Integrate backend API with meeting dashboard.",
-    "Riya: Prepare final project report draft.",
-    "Amit: Design analytics and charts UI.",
-  ];
-
-  const riyaNotes =
-    "Riya mentioned that the backend should be completed by Friday and the report draft should be ready before the demo.";
-
-  const amitNotes =
-    "Amit said he will handle the analytics charts and improve the performance dashboard UI.";
-
-  // Decide reply based on question text
-  const generateBotReply = (question) => {
-    const q = question.toLowerCase();
-
-    if (q.includes("summary") || q.includes("summarize")) {
-      return (
-        "📝 Meeting Summary (Demo):\n\n" +
-        lastMeetingSummary +
-        "\n\nLater I’ll generate this automatically from your real transcripts."
-      );
-    }
-
-    if (q.includes("task") || q.includes("todo") || q.includes("action item")) {
-      return (
-        "✅ Here are your demo tasks from the last meeting:\n\n" +
-        fakeTasks.map((t) => "• " + t).join("\n") +
-        "\n\nLater I’ll read real tasks from your stored action-item list."
-      );
-    }
-
-    if (q.includes("riya")) {
-      return (
-        "🧑‍💻 Riya (Demo info):\n\n" +
-        riyaNotes +
-        "\n\nIn the real system, I’ll search actual transcripts where Riya spoke."
-      );
-    }
-
-    if (q.includes("amit")) {
-      return (
-        "🎨 Amit (Demo info):\n\n" +
-        amitNotes +
-        "\n\nLater I’ll show Amit’s tasks, talk time, and performance trends."
-      );
-    }
-
-    if (q.includes("who said") || q.includes("who told")) {
-      return (
-        "🔍 In the future, I’ll scan transcripts to answer ‘who said what’. " +
-        "For now this is a demo — once backend is connected, I’ll search by speaker and keywords."
-      );
-    }
-
-    if (q.includes("performance") || q.includes("score")) {
-      return (
-        "📊 Performance (Demo):\n\n" +
-        "I’ll combine talk-time, sentiment and task completion to give each participant a performance score.\n" +
-        "Right now, this is a UI-only preview."
-      );
-    }
-
-    if (q.includes("help")) {
-      return (
-        "Here’s what you can ask me (demo):\n\n" +
-        "• \"What were my tasks in the last meeting?\"\n" +
-        "• \"Give me a summary of the last meeting.\"\n" +
-        "• \"What did Riya say about backend?\"\n" +
-        "• \"Show performance details\""
-      );
-    }
-
-    return (
-      "I’ve noted your question:\n\n" +
-      `"${question}"\n\n` +
-      "Right now I’m using demo data only. Once your backend is ready, " +
-      "I’ll answer using real meeting transcripts, tasks, and performance analytics."
-    );
-  };
 
   /* Auto-scroll when new message arrives */
   useEffect(() => {
@@ -119,24 +53,87 @@ function AssistantBubble() {
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed || typing) return;
 
+    // ✅ FIXED: Store the user message BEFORE clearing input
+    const userMessageText = trimmed;
+    setCurrentUserMessage(userMessageText);
+
     // Add user message
-    setMessages((prev) => [...prev, { from: "user", text: trimmed }]);
+    const userMessage = { 
+      from: "user", 
+      text: userMessageText,
+      timestamp: new Date().toISOString()
+    };
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
-    toast.success("Message sent");
+    setSources([]);
 
     // Show typing indicator
     setTyping(true);
 
-    // Fake AI delay, then smart-ish demo reply
-    setTimeout(() => {
-      const reply = generateBotReply(trimmed);
-      setMessages((prev) => [...prev, { from: "bot", text: reply }]);
+    try {
+      // Call backend AI chatbot
+      const response = await axios.post(`${API_BASE_URL}/api/chat`, {
+        message: userMessageText,
+        conversationHistory: messages.slice(-6) // Send last 6 messages for context
+      });
+
+      if (response.data.success) {
+        // ✅ FIXED: Store the user's original message for feedback
+        const botMessage = {
+          from: "bot",
+          text: response.data.response,
+          intent: response.data.intent || "GENERAL_HELP",
+          confidence: response.data.confidence || 0.8,
+          params: response.data.params || {},
+          userMessage: userMessageText, // ✅ Now correctly stores user's question
+          timestamp: new Date().toISOString()
+        };
+        
+        setMessages((prev) => [...prev, botMessage]);
+        
+        // Store sources if available
+        if (response.data.sources && response.data.sources.length > 0) {
+          setSources(response.data.sources);
+        }
+        
+        toast.success("Response generated");
+      } else {
+        throw new Error(response.data.error || 'Failed to get response');
+      }
+
+    } catch (error) {
+      console.error('❌ Chat error:', error);
+      
+      let errorMessage = "Sorry, I couldn't process your request. ";
+      
+      if (error.code === 'ECONNREFUSED' || error.message.includes('Network Error')) {
+        errorMessage += "Make sure the backend server is running on port 4000.";
+      } else if (error.response?.data?.message?.includes('Ollama')) {
+        errorMessage += "Please make sure Ollama is running (http://localhost:11434).";
+      } else {
+        errorMessage += error.response?.data?.message || error.message || "Please try again.";
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          from: "bot",
+          text: errorMessage,
+          intent: "ERROR",
+          confidence: 0,
+          userMessage: userMessageText, // ✅ Also store for error messages
+          timestamp: new Date().toISOString()
+        }
+      ]);
+      
+      toast.error("Failed to get response");
+    } finally {
       setTyping(false);
-    }, 900);
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -154,96 +151,182 @@ function AssistantBubble() {
     });
   };
 
+  const handleQuickQuestion = (question) => {
+    setInput(question);
+    // Auto-send after a brief delay
+    setTimeout(() => {
+      handleSend();
+    }, 100);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown date';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
   return (
     <>
       {/* Floating Button */}
       <button
         onClick={toggleAssistant}
-        className="fixed bottom-6 right-6 h-16 w-16 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/50 flex items-center justify-center text-sm font-semibold border border-emerald-300/50 transition-transform duration-150 hover:scale-105"
-        title="Smart Assistant"
+        className="fixed bottom-6 right-6 h-16 w-16 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg shadow-purple-900/50 flex items-center justify-center text-sm font-semibold transition-all duration-150 hover:scale-105 group z-50"
+        title="AI Meeting Assistant"
       >
-        <span className="relative">
-          SMA
-          <span className="absolute -top-1 -right-2 h-2.5 w-2.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
-        </span>
+        <Sparkles className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+        <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)] animate-pulse" />
       </button>
 
       {/* Chat Panel */}
       {isOpen && (
-        <div className="fixed bottom-28 right-6 w-80 bg-slate-900/60 border border-slate-600/40 rounded-2xl shadow-2xl shadow-emerald-900/40 flex flex-col text-sm backdrop-blur-xl ring-1 ring-white/10">
+        <div className="fixed bottom-28 right-6 w-[450px] bg-slate-900/95 border border-slate-700/50 rounded-2xl shadow-2xl shadow-purple-900/40 flex flex-col text-sm backdrop-blur-xl ring-1 ring-white/10 overflow-hidden max-h-[600px] z-50">
 
           {/* Header */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800">
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-b border-slate-800">
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-sm">Meeting Assistant</h3>
-                <span className="flex items-center gap-1 text-xs text-emerald-300">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                <Sparkles className="w-5 h-5 text-purple-400" />
+                <h3 className="font-semibold text-base text-white">AI Meeting Assistant</h3>
+                <span className="flex items-center gap-1.5 text-xs text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
                   Online
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
-                Demo mode – real AI will connect to your backend later
+              <p className="text-xs text-slate-400 mt-0.5">
+                Powered by Ollama AI • Searches your meetings
               </p>
             </div>
             <button
-              className="text-xs text-slate-400 hover:text-white"
+              className="text-slate-400 hover:text-white transition-colors p-1"
               onClick={toggleAssistant}
             >
-              ✕
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 px-3 py-2 space-y-2 overflow-y-auto max-h-64 bg-gradient-to-b from-slate-900/60 to-slate-950">
+          <div className="flex-1 px-4 py-3 space-y-3 overflow-y-auto bg-gradient-to-b from-slate-900/60 to-slate-950/80 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
             {messages.map((msg, i) => (
-              <div
+              <AIResponseDisplay
                 key={i}
-                className={`flex ${
-                  msg.from === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`px-3 py-1.5 rounded-xl max-w-[80%] text-xs leading-relaxed whitespace-pre-line ${
-                    msg.from === "user"
-                      ? "bg-emerald-600 text-white"
-                      : "bg-slate-800 text-slate-100"
-                  }`}
-                >
-                  {msg.text}
-                </div>
-              </div>
+                message={msg.text}
+                isUser={msg.from === "user"}
+                intent={msg.intent}
+                confidence={msg.confidence}
+                userMessage={msg.userMessage} // ✅ Now correctly passes user's question
+                params={msg.params || {}}
+                messageIndex={i}
+              />
             ))}
 
             {typing && (
               <div className="flex justify-start">
-                <div className="px-3 py-1.5 rounded-xl bg-slate-800 text-xs text-slate-300 animate-pulse">
-                  Assistant is typing...
+                <div className="px-4 py-3 rounded-2xl bg-slate-800/80 border border-slate-700/50 text-xs text-slate-300 flex items-center gap-2 rounded-bl-sm">
+                  <div className="flex gap-1">
+                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                  <span>AI is thinking...</span>
                 </div>
+              </div>
+            )}
+
+            {/* Sources */}
+            {sources.length > 0 && !typing && (
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 space-y-2">
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="font-medium">Sources:</span>
+                </div>
+                {sources.map((source, idx) => (
+                  <div key={idx} className="text-xs bg-slate-900/50 rounded-lg p-2 border border-slate-700/30">
+                    <div className="flex items-start gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-purple-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-medium truncate">
+                          {source.meetingTitle || source.title || 'Meeting'}
+                        </p>
+                        <p className="text-slate-400 text-[10px] mt-0.5">
+                          {formatDate(source.meetingDate || source.date)}
+                        </p>
+                        {source.text && (
+                          <p className="text-slate-400 text-[10px] mt-1 line-clamp-2">
+                            {source.text}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Quick Action Buttons */}
+          {messages.length <= 2 && (
+            <div className="px-4 py-3 border-t border-slate-800 bg-slate-900/50">
+              <p className="text-xs text-slate-400 mb-2 font-medium">Quick Questions:</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => handleQuickQuestion("What are my action items?")}
+                  className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg transition-colors text-left border border-slate-700/50"
+                >
+                  📋 My action items
+                </button>
+                <button
+                  onClick={() => handleQuickQuestion("Summarize last meeting")}
+                  className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg transition-colors text-left border border-slate-700/50"
+                >
+                  📝 Last meeting
+                </button>
+                <button
+                  onClick={() => handleQuickQuestion("What was discussed yesterday?")}
+                  className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg transition-colors text-left border border-slate-700/50"
+                >
+                  📅 Yesterday's meeting
+                </button>
+                <button
+                  onClick={() => handleQuickQuestion("Show meetings this week")}
+                  className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg transition-colors text-left border border-slate-700/50"
+                >
+                  🗓️ This week
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Input */}
-          <div className="border-t border-slate-800 px-3 py-2 bg-slate-950">
+          <div className="border-t border-slate-800 px-4 py-3 bg-slate-950/80">
             <textarea
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg text-xs px-2 py-1.5 resize-none outline-none focus:border-emerald-500"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg text-xs px-3 py-2 resize-none outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all text-white placeholder-slate-500"
               rows={2}
-              placeholder='Try: "What were my tasks in last meeting?"'
+              placeholder='Ask me about your meetings... (e.g., "What were my action items?")'
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={typing}
             />
-            <button
-              className="mt-2 w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!input.trim() || typing}
-              onClick={handleSend}
-            >
-              Send
-            </button>
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-[10px] text-slate-500">
+                Press Enter to send, Shift+Enter for new line
+              </p>
+              <button
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-xs py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium shadow-lg shadow-purple-900/30"
+                disabled={!input.trim() || typing}
+                onClick={handleSend}
+              >
+                {typing ? 'Sending...' : 'Send'}
+              </button>
+            </div>
           </div>
         </div>
       )}

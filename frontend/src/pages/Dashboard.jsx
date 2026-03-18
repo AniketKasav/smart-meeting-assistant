@@ -1,4 +1,4 @@
-// frontend/src/pages/Dashboard.jsx
+// frontend/src/pages/Dashboard.jsx - FIXED
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -14,20 +14,47 @@ import {
 } from 'lucide-react';
 import { meetingsAPI } from '../services/api';
 import MeetingCard from '../components/MeetingCard';
+import CreateMeetingModal from '../components/CreateMeetingModal';
+import VoiceButton from '../components/VoiceButton';
+import AIResponseDisplay from '../components/AIResponseDisplay';
+import { useAssistant } from '../contexts/AssistantContext';
+import SuggestionPanel from '../components/SuggestionPanel';
+import { NotificationManager, showNotification } from '../components/NotificationBanner';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  
+  // ✅ FIX: Get userId from localStorage
+  const userId = localStorage.getItem('userId');
+  
+  // State
+  const [showBriefingPanel, setShowBriefingPanel] = useState(true);
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [error, setError] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     inProgress: 0,
     completed: 0,
     totalDuration: 0,
   });
+
+  // AI Assistant
+  const { messages, isProcessing } = useAssistant();
+
+  // ✅ FIX: Moved showBriefing function here (not outside component)
+  const handleShowBriefing = () => {
+    showNotification({
+      type: 'info',
+      title: 'Morning Briefing',
+      message: 'Good morning! Check the briefing panel for your daily overview.',
+      duration: 5000
+    });
+    setShowBriefingPanel(true);
+  };
 
   // Fetch meetings
   const fetchMeetings = async () => {
@@ -77,6 +104,35 @@ const Dashboard = () => {
     }
   };
 
+  // Handle create new meeting
+  const handleCreateMeeting = async () => {
+    try {
+      // Generate unique meeting ID
+      const newMeetingId = `meeting_${Date.now()}`;
+      
+      // Create meeting in database
+      const response = await fetch('http://localhost:4000/api/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meetingId: newMeetingId,
+          title: `Meeting ${new Date().toLocaleDateString()}`,
+          status: 'in-progress'
+        })
+      });
+
+      if (response.ok) {
+        // Navigate directly to the meeting room
+        navigate(`/meeting/${newMeetingId}`);
+      } else {
+        alert('Failed to create meeting');
+      }
+    } catch (err) {
+      console.error('Error creating meeting:', err);
+      alert('Failed to create meeting');
+    }
+  };
+
   // Filter meetings by search query
   const filteredMeetings = meetings.filter(meeting => {
     if (!searchQuery) return true;
@@ -103,7 +159,20 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 relative">
+      {/* ✅ Notification Manager */}
+      <NotificationManager />
+
+      {/* ✅ Suggestion Panel - Fixed position */}
+      {showBriefingPanel && userId && (
+        <div className="fixed top-20 right-6 z-50">
+          <SuggestionPanel 
+            userId={userId} 
+            onClose={() => setShowBriefingPanel(false)}
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -112,6 +181,15 @@ const Dashboard = () => {
         </div>
 
         <div className="flex gap-3">
+          {/* ✅ Briefing Button */}
+          <button
+            onClick={handleShowBriefing}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 border border-purple-500 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            Daily Briefing
+          </button>
+
           <button
             onClick={fetchMeetings}
             disabled={loading}
@@ -122,7 +200,7 @@ const Dashboard = () => {
           </button>
 
           <button
-            onClick={() => navigate('/meeting-room')}
+            onClick={() => setShowCreateModal(true)}
             className="px-5 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -264,6 +342,23 @@ const Dashboard = () => {
           </div>
         </>
       )}
+
+      {/* Modals */}
+      <CreateMeetingModal 
+        isOpen={showCreateModal} 
+        onClose={() => setShowCreateModal(false)} 
+      />
+
+
+      {/* ✅ FIXED: Floating Voice + AI Container */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
+        {(messages?.length > 0 || isProcessing) && (
+          <div className="w-96 max-h-96">
+            <AIResponseDisplay />
+          </div>
+        )}
+        <VoiceButton />
+      </div>
     </div>
   );
 };

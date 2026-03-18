@@ -1,6 +1,6 @@
 // frontend/src/components/Sidebar.jsx
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Video, 
@@ -8,17 +8,23 @@ import {
   TrendingUp, 
   FileText, 
   Settings,
-  Mic
+  Mic,
+  CheckCircle2,
+  Search
 } from 'lucide-react';
 
 const Sidebar = () => {
+  const navigate = useNavigate();
+
   const menuItems = [
-    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/meeting-room', icon: Mic, label: 'Live Meeting' },
-    { path: '/meetings', icon: Calendar, label: 'All Meetings' },
-    { path: '/performance', icon: TrendingUp, label: 'Performance' },
-    { path: '/reports', icon: FileText, label: 'Reports' },
-    { path: '/settings', icon: Settings, label: 'Settings' },
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', type: 'link' },
+    { path: '/live-meeting', icon: Mic, label: 'Live Meeting', type: 'link' },
+    // { path: '/meetings', icon: Calendar, label: 'All Meetings', type: 'link' },
+    { path: '/performance', icon: TrendingUp, label: 'Performance', type: 'link' },
+    { path: '/reports', icon: FileText, label: 'Reports', type: 'link' },
+    { path: '/action-items', icon: CheckCircle2, label: 'Action Items', type: 'link' },
+    { path: '/search', icon: Search, label: 'Search', type: 'link' },
+    { path: '/settings', icon: Settings, label: 'Settings', type: 'link' },
   ];
 
   return (
@@ -38,21 +44,32 @@ const Sidebar = () => {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                isActive
-                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                  : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
-              }`
-            }
-          >
-            <item.icon className="w-5 h-5" />
-            <span className="font-medium">{item.label}</span>
-          </NavLink>
+        {menuItems.map((item, index) => (
+          item.type === 'button' ? (
+            <button
+              key={index}
+              onClick={item.action}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="font-medium">{item.label}</span>
+            </button>
+          ) : (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                  isActive
+                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                    : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                }`
+              }
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="font-medium">{item.label}</span>
+            </NavLink>
+          )
         ))}
       </nav>
 

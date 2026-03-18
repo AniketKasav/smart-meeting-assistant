@@ -21,10 +21,7 @@ const transcriptSchema = new mongoose.Schema({
     required: true,
     index: true 
   },
-  userId: { 
-    type: String, 
-    required: true 
-  },
+  userId: String, // ✅ Made optional - not required for all transcripts
   userName: String,
   
   // File paths
@@ -40,10 +37,21 @@ const transcriptSchema = new mongoose.Schema({
   // Processing metadata
   processingStatus: {
     type: String,
-    enum: ['pending', 'processing', 'completed', 'failed'],
+    enum: ['pending', 'processing', 'completed', 'failed', 'live'], // ✅ ADDED 'live'
     default: 'pending'
   },
   processingError: String,
+  
+  // Sentiment Analysis
+  sentiment: {
+    sentiment: {
+      type: String,
+      enum: ['positive', 'neutral', 'negative'],
+      default: 'neutral'
+    },
+    confidence: Number,
+    reason: String
+  },
   
   // Statistics
   stats: {
@@ -63,7 +71,8 @@ const transcriptSchema = new mongoose.Schema({
 // Indexes
 transcriptSchema.index({ meetingId: 1, userId: 1 });
 transcriptSchema.index({ processingStatus: 1 });
-transcriptSchema.index({ fullText: 'text' }); // Text search index
+// Add text index for full-text search
+transcriptSchema.index({ fullText: 'text', 'segments.text': 'text' });
 
 // Methods
 transcriptSchema.methods.updateFromFile = async function(transcriptData) {

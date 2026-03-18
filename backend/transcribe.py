@@ -42,35 +42,58 @@ try:
     model = WhisperModel("small", device="cpu", compute_type="float32")
 
     print("[transcribe] Transcribing audio...")
-    segments, info = model.transcribe(audio_file, language="en")
+    segments_generator, info = model.transcribe(audio_file, language="en")
 
-    # Get duration
+    # Get duration and language from info
     result["duration"] = float(info.duration) if info.duration else 0.0
     result["language"] = info.language if hasattr(info, 'language') else "en"
 
     print(f"[transcribe] Duration: {result['duration']}s, Language: {result['language']}")
 
-    # Process segments
+    # ✅ FIX: Process segments properly - consume the generator
     segment_count = 0
-    for s in segments:
+    segments_list = []  # Collect all segments first
+    
+    print("[transcribe] Processing segments...")
+    
+    # ✅ CRITICAL: Convert generator to list to consume it
+    for s in segments_generator:
         segment_data = {
             "start": float(s.start),
             "end": float(s.end),
-            "text": s.text.strip()
+            "text": s.text.strip()  # ✅ This is the actual text!
         }
         
         # Add confidence if available
         if hasattr(s, 'avg_logprob'):
             segment_data["confidence"] = float(s.avg_logprob)
         
-        result["transcript"].append(segment_data)
+        segments_list.append(segment_data)
         segment_count += 1
+        
+        # Log each segment for debugging
+        print(f"[transcribe] Segment {segment_count}: start={segment_data['start']:.2f}s, end={segment_data['end']:.2f}s")
+        print(f"[transcribe]   Text: '{segment_data['text'][:80]}'")  # Print first 80 chars
         
         # Log progress every 10 segments
         if segment_count % 10 == 0:
             print(f"[transcribe] Processed {segment_count} segments...")
 
+    # ✅ Now assign the collected segments
+    result["transcript"] = segments_list
+
     print(f"[transcribe] Total segments: {segment_count}")
+    
+    # ✅ Validation check
+    if segment_count == 0:
+        print("[transcribe] WARNING: No segments generated!")
+    else:
+        # Count segments with actual text
+        text_segments = [s for s in segments_list if s['text'].strip()]
+        print(f"[transcribe] Segments with text: {len(text_segments)}/{segment_count}")
+        
+        if len(text_segments) == 0:
+            print("[transcribe] ERROR: All segments have empty text!")
 
     # Ensure duration is set
     if result["duration"] == 0.0 and len(result["transcript"]) > 0:
@@ -84,6 +107,16 @@ try:
 
     print(f"[transcribe] SUCCESS: Saved transcript to {output_path}")
     print(f"[transcribe] SUCCESS: {segment_count} segments, {result['duration']:.2f}s")
+    
+    # ✅ Print full transcript for comparison
+    if result["transcript"]:
+        full_text = " ".join([s["text"] for s in result["transcript"]])
+        sample_text = " ".join([s["text"] for s in result["transcript"][:3]])
+        print(f"[transcribe] Sample text: {sample_text[:100]}...")
+        print(f"[transcribe] 📝 FULL FINAL TRANSCRIPT (small model):")
+        print(f"[transcribe] 🎯 \"{full_text}\"")
+        print(f"[transcribe] Model: small, Beam: 5, Language: {result['language']}, Duration: {result['duration']:.2f}s")
+    
     sys.exit(0)
 
 except ImportError as e:
@@ -91,7 +124,6 @@ except ImportError as e:
     print("[transcribe] Falling back to openai-whisper...")
 
 except UnicodeEncodeError as e:
-    # This shouldn't happen anymore, but just in case
     print(f"[transcribe] Unicode error (ignoring): {e}")
     # Try to save the file anyway
     try:
@@ -108,7 +140,7 @@ except Exception as e:
     print("[transcribe] Falling back to openai-whisper...")
 
 #
-# 2) FALLBACK TO OPENAI WHISPER (requires ffmpeg in PATH)
+# 2) FALLBACK TO OPENAI WHISPER
 #
 try:
     print("[transcribe] Attempting openai-whisper...")
@@ -128,19 +160,25 @@ try:
 
     # Process segments
     segment_count = 0
+    segments_list = []
+    
     for seg in out.get("segments", []):
         segment_data = {
             "start": float(seg["start"]),
             "end": float(seg["end"]),
-            "text": seg["text"].strip()
+            "text": seg["text"].strip()  # ✅ Actual text
         }
         
         # Add confidence if available
         if "avg_logprob" in seg:
             segment_data["confidence"] = float(seg["avg_logprob"])
         
-        result["transcript"].append(segment_data)
+        segments_list.append(segment_data)
         segment_count += 1
+        
+        print(f"[transcribe] Segment {segment_count}: '{segment_data['text'][:80]}'")
+
+    result["transcript"] = segments_list
 
     print(f"[transcribe] Total segments: {segment_count}")
 
@@ -155,6 +193,11 @@ try:
 
     print(f"[transcribe] SUCCESS: Saved transcript to {output_path}")
     print(f"[transcribe] SUCCESS: {segment_count} segments, {result['duration']:.2f}s")
+    
+    if result["transcript"]:
+        sample_text = " ".join([s["text"] for s in result["transcript"][:3]])
+        print(f"[transcribe] Sample text: {sample_text[:100]}...")
+    
     sys.exit(0)
 
 except ImportError as e:

@@ -1,162 +1,190 @@
-// frontend/src/components/MeetingCard.jsx
+// frontend/src/components/MeetingCard.jsx - FIXED VERSION
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatDistanceToNow, format } from 'date-fns';
-import { 
-  Clock, 
-  Users, 
-  FileText, 
-  Trash2, 
-  PlayCircle,
-  CheckCircle,
-  AlertCircle,
-  Calendar
-} from 'lucide-react';
+import { Calendar, Clock, Users, Video, FileText, Trash2 } from 'lucide-react';
 
 const MeetingCard = ({ meeting, onDelete, onRefresh }) => {
   const navigate = useNavigate();
 
-  const getStatusColor = (status) => {
-    const colors = {
-      'scheduled': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      'in-progress': 'bg-green-500/20 text-green-400 border-green-500/30',
-      'completed': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-      'archived': 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-    };
-    return colors[status] || colors['scheduled'];
-  };
-
-  const getStatusIcon = (status) => {
-    const icons = {
-      'scheduled': Calendar,
-      'in-progress': PlayCircle,
-      'completed': CheckCircle,
-      'archived': AlertCircle,
-    };
-    const Icon = icons[status] || Calendar;
-    return <Icon className="w-4 h-4" />;
+  const formatDate = (date) => {
+    if (!date) return 'No date';
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const formatDuration = (seconds) => {
-    if (!seconds) return 'N/A';
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
+    if (!seconds) return '0m';
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    
     if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`;
-    } else {
-      return `${secs}s`;
+      return `${hours}h ${remainingMinutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
+  const getStatusColor = () => {
+    switch (meeting.status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'in-progress':
+        return 'bg-blue-100 text-blue-800';
+      case 'scheduled':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
+  // Navigate to MEETING DETAILS page (not video room)
+  const handleViewDetails = () => {
+    console.log('🔍 View Details clicked');
+    console.log('  Meeting:', meeting);
+    console.log('  Meeting._id:', meeting._id);
+    console.log('  Meeting.meetingId:', meeting.meetingId);
+    console.log('  Navigating to:', `/meetings/${meeting._id}`);
+    
+    navigate(`/meetings/${meeting._id}`);
+  };
+
+  // Navigate to VIDEO ROOM
+  const handleJoinMeeting = (e) => {
+    e.stopPropagation();
+    console.log('Joining video call:', meeting._id);
+    navigate(`/meeting/${meeting._id}`);
+  };
+
+  // Delete meeting
   const handleDelete = async (e) => {
     e.stopPropagation();
-    if (window.confirm(`Delete meeting "${meeting.title}"?`)) {
-      try {
-        await onDelete(meeting.meetingId);
-        onRefresh?.();
-      } catch (err) {
-        alert('Failed to delete meeting');
-      }
+    
+    if (!window.confirm(`Delete "${meeting.title}"? This cannot be undone.`)) {
+      return;
     }
-  };
 
-  const handleCardClick = () => {
-    navigate(`/meetings/${meeting.meetingId}`);
+    try {
+      console.log('Deleting meeting:', meeting._id);
+      
+      const response = await fetch(`http://localhost:4000/api/meetings/${meeting._id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        console.log('✅ Meeting deleted successfully');
+        // Call the onDelete callback if provided
+        if (onDelete) {
+          onDelete(meeting._id);
+        }
+        // Refresh the meeting list
+        if (onRefresh) {
+          onRefresh();
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Delete failed:', errorData);
+        alert('Failed to delete meeting: ' + (errorData.error || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('❌ Delete error:', err);
+      alert('Failed to delete meeting: ' + err.message);
+    }
   };
 
   return (
-    <div
-      onClick={handleCardClick}
-      className="bg-slate-900/70 border border-slate-800 rounded-xl p-5 hover:border-slate-700 hover:bg-slate-900/90 transition-all cursor-pointer group relative"
+    <div 
+      onClick={handleViewDetails}
+      className="bg-slate-800/50 border border-slate-700 rounded-xl p-5 cursor-pointer hover:bg-slate-800 hover:border-slate-600 transition-all duration-200 group"
     >
-      {/* Status Badge */}
-      <div className="flex items-center justify-between mb-3">
-        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(meeting.status)}`}>
-          {getStatusIcon(meeting.status)}
-          <span className="capitalize">{meeting.status.replace('-', ' ')}</span>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg font-semibold text-white mb-2 truncate group-hover:text-blue-400 transition-colors">
+            {meeting.title}
+          </h3>
+          {meeting.description && (
+            <p className="text-sm text-slate-400 line-clamp-2 mb-2">
+              {meeting.description}
+            </p>
+          )}
+          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor()}`}>
+            {meeting.status}
+          </span>
         </div>
 
-        {/* Delete Button */}
+        {/* Delete button */}
         <button
           onClick={handleDelete}
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-red-500/20 rounded-lg text-red-400 hover:text-red-300"
+          className="ml-3 p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
           title="Delete meeting"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-5 h-5" />
         </button>
       </div>
 
-      {/* Meeting Title */}
-      <h3 className="text-lg font-semibold text-white mb-2 line-clamp-1">
-        {meeting.title || `Meeting ${meeting.meetingId}`}
-      </h3>
-
-      {/* Description */}
-      {meeting.description && (
-        <p className="text-sm text-slate-400 mb-3 line-clamp-2">
-          {meeting.description}
-        </p>
-      )}
-
-      {/* Meeting ID */}
-      <div className="text-xs text-slate-500 mb-3 font-mono">
-        ID: {meeting.meetingId}
-      </div>
-
-      {/* Metadata Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        {/* Participants */}
-        <div className="flex items-center gap-2 text-sm">
-          <Users className="w-4 h-4 text-slate-400" />
-          <span className="text-slate-300">
-            {meeting.participants?.length || 0} {meeting.participants?.length === 1 ? 'person' : 'people'}
-          </span>
-        </div>
+      {/* Meeting info */}
+      <div className="space-y-2 mb-4">
+        {/* Date */}
+        {(meeting.startedAt || meeting.createdAt) && (
+          <div className="flex items-center text-sm text-slate-400">
+            <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span>{formatDate(meeting.startedAt || meeting.createdAt)}</span>
+          </div>
+        )}
 
         {/* Duration */}
-        <div className="flex items-center gap-2 text-sm">
-          <Clock className="w-4 h-4 text-slate-400" />
-          <span className="text-slate-300">
-            {formatDuration(meeting.duration)}
-          </span>
-        </div>
-      </div>
+        {meeting.duration && (
+          <div className="flex items-center text-sm text-slate-400">
+            <Clock className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span>{formatDuration(meeting.duration)}</span>
+          </div>
+        )}
 
-      {/* Transcript Status */}
-      {meeting.participants?.some(p => p.transcriptPath) && (
-        <div className="flex items-center gap-2 text-sm text-emerald-400 mb-3">
-          <FileText className="w-4 h-4" />
-          <span>Transcript available</span>
-        </div>
-      )}
+        {/* Participants */}
+        {meeting.participants && meeting.participants.length > 0 && (
+          <div className="flex items-center text-sm text-slate-400">
+            <Users className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span>{meeting.participants.length} participant(s)</span>
+          </div>
+        )}
 
-      {/* Date */}
-      <div className="text-xs text-slate-500 border-t border-slate-800 pt-3 mt-3">
-        {meeting.startedAt ? (
-          <>
-            <span className="font-medium text-slate-400">Started:</span>{' '}
-            {format(new Date(meeting.startedAt), 'MMM dd, yyyy HH:mm')}
-            {' • '}
-            {formatDistanceToNow(new Date(meeting.startedAt), { addSuffix: true })}
-          </>
-        ) : (
-          <>
-            <span className="font-medium text-slate-400">Created:</span>{' '}
-            {format(new Date(meeting.createdAt), 'MMM dd, yyyy HH:mm')}
-          </>
+        {/* Transcript available */}
+        {meeting.participants?.some(p => p.transcriptPath) && (
+          <div className="flex items-center text-sm text-green-400">
+            <FileText className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span>Transcript available</span>
+          </div>
         )}
       </div>
 
-      {/* Owner */}
-      {meeting.owner && (
-        <div className="text-xs text-slate-500 mt-2">
-          <span className="font-medium text-slate-400">Host:</span> {meeting.owner.name}
-        </div>
-      )}
+      {/* Action buttons */}
+      <div className="flex gap-2 pt-3 border-t border-slate-700">
+        {/* Join Meeting button */}
+        <button
+          onClick={handleJoinMeeting}
+          className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 font-medium text-sm"
+        >
+          <Video className="w-4 h-4" />
+          Join Meeting
+        </button>
+
+        {/* View Details button */}
+        <button
+          onClick={handleViewDetails}
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 font-medium text-sm"
+        >
+          <FileText className="w-4 h-4" />
+          View Details
+        </button>
+      </div>
     </div>
   );
 };

@@ -12,6 +12,11 @@ __pycache__/
 # Environment variables (IMPORTANT - contains secrets!)
 .env
 backend/.env
+*.env
+
+# 🔐 Secrets (VERY IMPORTANT)
+backend/google-tokens.json
+*.json
 
 # Uploads and generated files
 backend/uploads/
@@ -37,6 +42,6 @@ Thumbs.db
 npm-debug.log
 yarn-error.log
 
-# Whisper models (large files)
+# Models (large files)
 *.pt
 *.bin
