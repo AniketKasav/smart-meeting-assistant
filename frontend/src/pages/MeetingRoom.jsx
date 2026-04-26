@@ -418,6 +418,11 @@ const MeetingRoom = () => {
             participants.forEach((p) => createPeer(p, true));
           });
 
+          globalSocket.on("existing-participants", (participants) => {
+            participants.forEach((participant) => {
+              createPeer(participant, true);
+            });
+          });
           globalSocket.on("user-joined", (participant) => {
             createPeer(participant, false);
           });
@@ -1345,6 +1350,7 @@ const MeetingRoom = () => {
 };
 
 export default MeetingRoom;
+
 
 
 
