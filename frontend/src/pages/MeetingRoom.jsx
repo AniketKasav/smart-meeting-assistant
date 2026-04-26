@@ -424,7 +424,7 @@ const MeetingRoom = () => {
             });
           });
           globalSocket.on("user-joined", (participant) => {
-            createPeer(participant, true);
+            createPeer(participant, false);
           });
 
           globalSocket.on("offer", ({ from, offer }) => {
@@ -1350,6 +1350,7 @@ const MeetingRoom = () => {
 };
 
 export default MeetingRoom;
+
 
 
 
