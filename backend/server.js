@@ -128,7 +128,11 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://smart-meeting-assistant-psi.vercel.app",
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -2406,7 +2410,9 @@ io.on("connection", (socket) => {
         { $set: { processingStatus: "completed" } },
       );
       if (promotedCount.modifiedCount > 0) {
-        console.log(`✅ Promoted ${promotedCount.modifiedCount} live transcript(s) to completed on meeting end`);
+        console.log(
+          `✅ Promoted ${promotedCount.modifiedCount} live transcript(s) to completed on meeting end`,
+        );
       }
 
       // ✅ STEP 4: Update meeting status
