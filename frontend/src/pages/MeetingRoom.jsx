@@ -1229,10 +1229,10 @@ const MeetingRoom = () => {
                           <div className="flex items-start gap-3 p-2 rounded hover:bg-gray-700/30 transition-colors">
                             <div className="flex items-center gap-2 min-w-[80px]">
                               <div className="w-5 h-5 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                                {userName.charAt(0).toUpperCase()}
+                                {(segment.speaker || userName).charAt(0).toUpperCase()}
                               </div>
                               <span className="text-purple-400 text-xs font-medium truncate">
-                                {userName}
+                                {segment.speaker || userName}
                               </span>
                             </div>
                             <div className="flex-1">
@@ -1350,6 +1350,7 @@ const MeetingRoom = () => {
 };
 
 export default MeetingRoom;
+
 
 
 
