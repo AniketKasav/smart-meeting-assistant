@@ -1,0 +1,583 @@
+// backend/services/aiService.js - PHASE 7 ENHANCED WITH FIXES
+const axios = require('axios');
+const { OLLAMA_CONFIG, SYSTEM_PROMPT } = require('../config/ollama.config');
+const contextManager = require('./contextManager');
+
+class AIService {
+  constructor() {
+    this.config = {
+      baseUrl: OLLAMA_CONFIG.host,
+      model: OLLAMA_CONFIG.model,
+      timeout: OLLAMA_CONFIG.timeout,
+      options: OLLAMA_CONFIG.options
+    };
+    this.systemPrompt = SYSTEM_PROMPT;
+    console.log('🤖 AI Service initialized:', this.config.baseUrl);
+  }
+
+  /**
+   * Build dynamic prompt with user context and multi-turn state
+   */
+  buildPrompt(userMessage, conversationHistory = [], userContext = {}, currentContext = null) {
+    const currentDate = new Date().toISOString().split('T')[0];
+    const currentTime = new Date().toLocaleTimeString('en-US', { hour12: false });
+    
+    let contextInfo = `\nCURRENT DATE: ${currentDate}\nCURRENT TIME: ${currentTime}\n`;
+    
+    if (userContext.userName) {
+      contextInfo += `USER: ${userContext.userName}\n`;
+    }
+    
+    if (userContext.upcomingMeetings) {
+      contextInfo += `UPCOMING MEETINGS: ${userContext.upcomingMeetings.length}\n`;
+    }
+    
+    if (userContext.pendingTasks) {
+      contextInfo += `PENDING TASKS: ${userContext.pendingTasks}\n`;
+    }
+
+    // Add multi-turn context
+    let multiTurnContext = '';
+    if (currentContext && !currentContext.isComplete) {
+      multiTurnContext = `\n🔄 MULTI-TURN CONVERSATION IN PROGRESS:
+INTENT: ${currentContext.intent}
+COLLECTED PARAMS: ${JSON.stringify(currentContext.collectedParams)}
+PENDING PARAMS: ${JSON.stringify(currentContext.pendingParams)}
+STEP: ${currentContext.step}
+LAST QUESTION: ${currentContext.nextQuestion || 'none'}
+
+INSTRUCTION: Continue collecting missing parameters. Ask ONE question at a time.
+`;
+    }
+
+    let conversationContext = '';
+    if (conversationHistory.length > 0) {
+      conversationContext = '\nCONVERSATION HISTORY:\n';
+      conversationHistory.slice(-5).forEach(msg => {
+        conversationContext += `${msg.role}: ${msg.content}\n`;
+      });
+    }
+
+    return `${SYSTEM_PROMPT}${contextInfo}${multiTurnContext}${conversationContext}\n\nUSER REQUEST: "${userMessage}"\n\nRespond with ONLY valid JSON:`;
+  }
+
+  /**
+   * Extract parameters from user message using AI - CONTEXT AWARE (FIXED)
+   */
+  async extractParameters(userMessage, intent, currentContext = null) {
+    const currentDate = new Date().toISOString().split('T')[0];
+    const tomorrowDate = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+    
+    // Build context-aware prompt
+    let contextPrompt = '';
+    if (currentContext && currentContext.nextQuestion) {
+      contextPrompt = `
+CONTEXT: You just asked: "${currentContext.nextQuestion}"
+The user is answering that question.
+Already collected: ${JSON.stringify(currentContext.collectedParams || {})}
+`;
+    }
+
+    const extractionPrompt = `${contextPrompt}
+Current date: ${currentDate}
+Tomorrow's date: ${tomorrowDate}
+
+Extract information from this message for ${intent}:
+User message: "${userMessage}"
+
+IMPORTANT EXTRACTION RULES:
+- If user says "tomorrow", use date: ${tomorrowDate}
+- If user says "today", use date: ${currentDate}
+- If user says "3pm" or "3:00 pm", convert to "15:00"
+- If user says "3 in the afternoon", convert to "15:00"
+- If user says names like "John" or "John and Sarah", extract as ["John"] or ["John", "Sarah"]
+- If user answers with just a time, that's the time parameter
+- If user answers with just a name, that's a participant
+- If user answers with just a date phrase, parse it to YYYY-MM-DD
+- If user is vague ("all of them", "don't answer", "none"), return null for that field
+
+Return ONLY valid JSON with extracted values:
+{
+  "title": "extracted title or null",
+  "date": "YYYY-MM-DD or null",
+  "time": "HH:MM (24-hour) or null",
+  "participants": ["array of names"],
+  "assignee": "name or null",
+  "taskTitle": "task description or null",
+  "dueDate": "YYYY-MM-DD or null"
+}`;
+
+    try {
+      const response = await this.callOllama(extractionPrompt);
+      
+      // Use dateParser as backup/enhancement
+      const dateParser = require('../utils/dateParser');
+      
+      if (response) {
+        // Enhance date parsing if AI failed or returned null
+        if (!response.date && userMessage) {
+          const parsedDate = dateParser.parseDate(userMessage);
+          if (parsedDate) {
+            response.date = parsedDate;
+            console.log('📅 DateParser enhanced date:', parsedDate);
+          }
+        }
+        
+        // Enhance time parsing if AI failed or returned null
+        if (!response.time && userMessage) {
+          const parsedTime = dateParser.parseTime(userMessage);
+          if (parsedTime) {
+            response.time = parsedTime;
+            console.log('⏰ DateParser enhanced time:', parsedTime);
+          }
+        }
+        
+        // Enhance participant parsing if AI failed or returned empty
+        if (!response.participants || response.participants.length === 0) {
+          const parsedParticipants = dateParser.parseParticipants(userMessage);
+          if (parsedParticipants.length > 0) {
+            response.participants = parsedParticipants;
+            console.log('👥 DateParser enhanced participants:', parsedParticipants);
+          }
+        }
+        
+        // Enhance title extraction if AI failed
+        if (!response.title && !response.taskTitle && userMessage) {
+          const extracted = dateParser.extractTitle(userMessage);
+          if (extracted) {
+            if (intent === 'CREATE_TASK') {
+              response.taskTitle = extracted;
+            } else {
+              response.title = extracted;
+            }
+            console.log('📝 DateParser enhanced title:', extracted);
+          }
+        }
+      }
+      
+      console.log('📦 Final extracted params:', response);
+        // Debug logging for date/time/participant extraction
+        console.log('🔍 isDateTime?', dateParser.isDateTimeExpression(userMessage));
+        console.log('🔍 Should extract participants?', !dateParser.isDateTimeExpression(userMessage));
+      return response || {};
+    } catch (error) {
+      console.error('Parameter extraction error:', error);
+      
+      // Fallback to dateParser completely
+      console.log('⚠️ Falling back to dateParser only');
+      const dateParser = require('../utils/dateParser');
+      return {
+        title: dateParser.extractTitle(userMessage),
+        date: dateParser.parseDate(userMessage),
+        time: dateParser.parseTime(userMessage),
+        participants: dateParser.parseParticipants(userMessage),
+        assignee: null,
+        taskTitle: null,
+        dueDate: null
+      };
+    }
+  }
+
+  /**
+   * Get follow-up question for missing parameter
+   */
+  getFollowUpQuestion(intent, param) {
+    const questions = {
+      'SCHEDULE_MEETING': {
+        'title': 'What is the meeting about?',
+        'date': 'When would you like to schedule the meeting?',
+        'time': 'What time should the meeting start?',
+        'participants': 'Who should I invite to this meeting?'
+      },
+      'CREATE_TASK': {
+        'taskTitle': 'What should the task be?',
+        'assignee': 'Who should I assign this task to?',
+        'dueDate': 'When should this task be completed?'
+      }
+    };
+
+    return questions[intent]?.[param] || `Please provide: ${param}`;
+  }
+
+  /**
+   * Get action type for intent
+   */
+  getActionForIntent(intent) {
+    const actions = {
+      'SCHEDULE_MEETING': 'create',
+      'CREATE_TASK': 'create',
+      'SEARCH_MEETINGS': 'search',
+      'LIST_TASKS': 'query'
+    };
+    return actions[intent] || 'none';
+  }
+
+  /**
+   * Get completion message
+   */
+  getCompletionMessage(intent, params) {
+    if (intent === 'SCHEDULE_MEETING') {
+      const parts = [];
+      if (params.title) parts.push(`about ${params.title}`);
+      if (params.date) parts.push(`on ${params.date}`);
+      if (params.time) parts.push(`at ${params.time}`);
+      if (params.participants && params.participants.length > 0) {
+        parts.push(`with ${params.participants.join(', ')}`);
+      }
+      return `I'll schedule a meeting ${parts.join(' ')}.`;
+    }
+    if (intent === 'CREATE_TASK') {
+      const parts = [];
+      if (params.taskTitle) parts.push(`"${params.taskTitle}"`);
+      if (params.assignee) parts.push(`for ${params.assignee}`);
+      if (params.dueDate) parts.push(`due ${params.dueDate}`);
+      return `I'll create a task ${parts.join(' ')}.`;
+    }
+    return 'Done!';
+  }
+
+  /**
+   * Get missing parameters
+   */
+  getMissingParams(intent, collectedParams) {
+    const requiredParams = {
+      SCHEDULE_MEETING: ['title', 'date', 'time', 'participants'],
+      CREATE_TASK: ['taskTitle', 'assignee', 'dueDate']
+    };
+
+    const needed = requiredParams[intent] || [];
+    return needed.filter(param => {
+      const value = collectedParams[param];
+      // Missing if null, undefined, empty string, or empty array
+      return !value || (Array.isArray(value) && value.length === 0);
+    });
+  }
+
+  /**
+   * Main processing function with multi-turn support
+   */
+  async processUserInput(userId, userMessage, conversationHistory = [], userContext = {}) {
+    try {
+      console.log(`📥 Processing input from user ${userId}: "${userMessage}"`);
+
+      // Get current multi-turn context
+      const currentContext = await contextManager.getCurrentContext(userId);
+
+      // Check if in multi-turn conversation
+      if (currentContext && currentContext.intent && !currentContext.isComplete) {
+        console.log('🔄 Continuing multi-turn conversation');
+        const multiTurnResult = await this.handleMultiTurn(
+          userId,
+          userMessage,
+          conversationHistory,
+          currentContext,
+          userContext
+        );
+
+        if (multiTurnResult) {
+          multiTurnResult.timestamp = new Date().toISOString();
+          return {
+            success: true,
+            data: multiTurnResult
+          };
+        }
+      }
+
+      // Build prompt with context
+      const prompt = this.buildPrompt(userMessage, conversationHistory, userContext, currentContext);
+
+      // Call Ollama
+      const aiResponse = await this.callOllama(prompt);
+
+      // Validate response
+      if (!aiResponse || typeof aiResponse !== 'object') {
+        throw new Error('Invalid AI response format');
+      }
+
+      // Parse and validate response
+      const parsedResponse = {
+        intent: aiResponse.intent || 'GENERAL_HELP',
+        confidence: aiResponse.confidence || 0.5,
+        action: aiResponse.action || 'none',
+        params: aiResponse.params || {},
+        response: aiResponse.response || 'I can help you with that.',
+        suggestion: aiResponse.suggestion || null,
+        clarification: aiResponse.clarification || null,
+        needsMoreInfo: aiResponse.needsMoreInfo || false,
+        multiTurn: false,
+        isComplete: true,
+        step: 1,
+        timestamp: new Date().toISOString()
+      };
+
+      // Check if this starts a multi-turn conversation
+      if (parsedResponse.needsMoreInfo && parsedResponse.clarification) {
+        console.log('🔄 Starting multi-turn conversation');
+        
+        const missingParams = this.getMissingParams(parsedResponse.intent, parsedResponse.params);
+
+        // Initialize multi-turn context
+        await contextManager.updateContext(userId, {
+          intent: parsedResponse.intent,
+          collectedParams: parsedResponse.params,
+          pendingParams: missingParams,
+          nextQuestion: parsedResponse.clarification,
+          step: 1,
+          isComplete: false
+        });
+
+        parsedResponse.multiTurn = true;
+        parsedResponse.isComplete = false;
+      }
+
+      console.log('✅ AI processing complete:', parsedResponse.intent);
+
+      return {
+        success: true,
+        data: parsedResponse
+      };
+
+    } catch (error) {
+      console.error('AI Processing Error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to process input',
+        data: {
+          intent: 'ERROR',
+          response: 'Sorry, I encountered an error processing your request.',
+          timestamp: new Date().toISOString()
+        }
+      };
+    }
+  }
+
+  /**
+   * Handle multi-turn conversation continuation (FIXED)
+   */
+  async handleMultiTurn(userId, userMessage, conversationHistory, currentContext, userContext) {
+    try {
+      // Safety check
+      if (!currentContext || !currentContext.intent) {
+        console.log('⚠️ No active multi-turn context, starting fresh');
+        return null;
+      }
+
+      const intent = currentContext.intent;
+      const collectedParams = { ...(currentContext.collectedParams || {}) }; // Clone to avoid mutation
+      const pendingParams = currentContext.pendingParams || [];
+
+      console.log(`🔄 Multi-turn for ${intent}, step ${currentContext.step}`);
+      console.log('📝 Current collected params:', collectedParams);
+
+      // Extract new info from user's message - PASS CONTEXT
+      const extractedParams = await this.extractParameters(userMessage, intent, currentContext);
+      console.log('✨ Newly extracted params:', extractedParams);
+
+      // Smart merge - only overwrite if new value exists and is not null
+      for (const key in extractedParams) {
+        const newValue = extractedParams[key];
+        
+        // Skip if new value is null, undefined, or empty
+        if (newValue === null || newValue === undefined || newValue === '') {
+          continue;
+        }
+        
+        // For arrays, merge unique values
+        if (Array.isArray(newValue)) {
+          if (!collectedParams[key]) {
+            collectedParams[key] = [];
+          }
+          // Only add non-empty arrays
+          if (newValue.length > 0) {
+            collectedParams[key] = [
+              ...new Set([...collectedParams[key], ...newValue])
+            ];
+          }
+        } else {
+          // For other values, only update if has actual value
+          collectedParams[key] = newValue;
+        }
+      }
+
+      console.log('✅ Merged params:', collectedParams);
+
+      // Check what's still missing
+      const stillMissing = this.getMissingParams(intent, collectedParams);
+      console.log('❓ Still missing:', stillMissing);
+
+      if (stillMissing.length > 0) {
+        // Ask for next missing parameter
+        const nextParam = stillMissing[0];
+        const question = this.getFollowUpQuestion(intent, nextParam);
+
+        // Update context
+        await contextManager.updateContext(userId, {
+          ...currentContext,
+          collectedParams,
+          pendingParams: stillMissing,
+          step: currentContext.step + 1,
+          nextQuestion: question,
+          isComplete: false
+        });
+
+        return {
+          intent,
+          action: this.getActionForIntent(intent),
+          params: collectedParams,
+          response: 'Got it.',
+          needsMoreInfo: true,
+          clarification: question,
+          multiTurn: true,
+          isComplete: false,
+          step: currentContext.step + 1,
+          collectedParams,
+          pendingParams: stillMissing
+        };
+      }
+
+      // All params collected - execute action
+      console.log('✅ All params collected:', collectedParams);
+
+      // Clear context
+      await contextManager.clearContext(userId);
+
+      return {
+        intent,
+        action: this.getActionForIntent(intent),
+        params: collectedParams,
+        response: `Got it! ${this.getCompletionMessage(intent, collectedParams)}`,
+        needsMoreInfo: false,
+        multiTurn: true,
+        isComplete: true
+      };
+
+    } catch (error) {
+      console.error('Multi-turn error:', error);
+      // Clear context on error
+      await contextManager.clearContext(userId);
+      return null;
+    }
+  }
+
+  /**
+   * Call Ollama API
+   */
+  async callOllama(prompt) {
+    try {
+      console.log('🤖 Calling Ollama at:', this.config.baseUrl);
+      
+      const response = await axios.post(
+        `${this.config.baseUrl}/api/generate`,
+        {
+          model: this.config.model,
+          prompt,
+          stream: false,
+          format: 'json',
+          options: this.config.options
+        },
+        { timeout: this.config.timeout }
+      );
+
+      if (!response.data || !response.data.response) {
+        throw new Error('Empty response from Ollama');
+      }
+
+      let rawResponse = response.data.response;
+      
+      // Check if it's already an object
+      if (typeof rawResponse === 'object') {
+        return rawResponse;
+      }
+
+      // It's a string, parse it
+      rawResponse = rawResponse.trim();
+      
+      // Remove markdown code blocks
+      rawResponse = rawResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      
+      // Extract JSON object
+      const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        rawResponse = jsonMatch[0];
+      }
+
+      console.log('🤖 Ollama raw response:', rawResponse.substring(0, 200));
+
+      try {
+        return JSON.parse(rawResponse);
+      } catch (parseError) {
+        console.error('Failed to parse AI response:', parseError.message);
+        console.error('Response was:', rawResponse.substring(0, 500));
+        
+        // Return fallback
+        return {
+          intent: 'SCHEDULE_MEETING',
+          action: 'create',
+          params: {
+            title: null,
+            date: null,
+            time: null,
+            participants: []
+          },
+          response: "I understand you want to schedule a meeting. When would you like to schedule it?",
+          clarification: "When would you like to schedule the meeting?",
+          needsMoreInfo: true
+        };
+      }
+
+    } catch (error) {
+      console.error('Ollama API error:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Parse AI response
+   */
+  parseResponse(rawResponse) {
+    try {
+      if (typeof rawResponse === 'object' && rawResponse !== null) {
+        return rawResponse;
+      }
+      if (typeof rawResponse === 'string') {
+        return JSON.parse(rawResponse.trim());
+      }
+      throw new Error('Invalid response type');
+    } catch (error) {
+      console.error('Parse error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if Ollama is available
+   */
+  async healthCheck() {
+    try {
+      const response = await axios.get(`${this.config.baseUrl}/api/tags`, {
+        timeout: 5000
+      });
+      
+      const hasModel = response.data.models.some(m => m.name.includes('llama3.2'));
+      
+      return {
+        available: true,
+        models: response.data.models.map(m => m.name),
+        hasRequiredModel: hasModel
+      };
+    } catch (error) {
+      return {
+        available: false,
+        models: [],
+        hasRequiredModel: false,
+        error: error.message
+      };
+    }
+  }
+
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+
+module.exports = new AIService();

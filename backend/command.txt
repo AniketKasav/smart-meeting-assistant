@@ -1,0 +1,1 @@
+to activate the ver pyhton env  .\venv\Scripts\Activate.ps1

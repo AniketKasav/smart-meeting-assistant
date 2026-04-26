@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Uploads (audio files, recordings)
+uploads/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# VOSK model (large local model — never commit)
+vosk-model*/
+*.zip
+
+# Whisper / faster-whisper cache
+.cache/
+whisper_cache/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Google tokens (sensitive)
+google-tokens.json
+
+# Temp files
+*.tmp
+*.temp
