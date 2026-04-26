@@ -138,7 +138,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
-app.use(express.json());
+app.options('*', cors());`napp.use(express.json());
 
 // Security headers
 // Security headers
@@ -2861,3 +2861,4 @@ server.listen(PORT, () => {
   ╚══════════════════════════════════════════════════════╝
     `);
 });
+
