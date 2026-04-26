@@ -508,7 +508,12 @@ const MeetingRoom = () => {
   };
 
   const createPeer = (participant, initiator) => {
-    if (!globalStream || peersRef.current[participant.socketId]) return;
+    if (peersRef.current[participant.socketId]) return;
+    if (!globalStream) {
+      console.warn('Stream not ready, retrying in 1s...');
+      setTimeout(() => createPeer(participant, initiator), 1000);
+      return;
+    }
 
     const peer = new SimplePeer({
       initiator,
@@ -1340,5 +1345,6 @@ const MeetingRoom = () => {
 };
 
 export default MeetingRoom;
+
 
 
