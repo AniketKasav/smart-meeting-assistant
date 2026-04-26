@@ -6,7 +6,7 @@
 //   2. Added missing CHATBOT_SHORTCUT case
 //   3. SHOW_MEETING_REPORT now correctly uses params.keyword (extracted by fixed intentMatcher)
 
-const API = "http://localhost:4000/api";
+const API = "https://smart-meeting-assistant-olcl.onrender.com/api";
 
 // ── Tiny API helper ────────────────────────────────────────────────────────────
 const apiFetch = async (path) => {
@@ -396,3 +396,4 @@ class ActionExecutor {
 
 export const actionExecutor = new ActionExecutor();
 export default actionExecutor;
+

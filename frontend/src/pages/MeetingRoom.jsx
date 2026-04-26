@@ -28,7 +28,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useVoiceCommand } from "../contexts/VoiceCommandContext";
 import { micLock } from "../utils/micLock";
 
-const SOCKET_URL = "http://localhost:4000";
+const SOCKET_URL = "https://smart-meeting-assistant-olcl.onrender.com";
 
 // ─── Language options (English, Hindi, Marathi) ─────────────────────────────
 const LANGUAGES = [
@@ -748,7 +748,7 @@ const MeetingRoom = () => {
           formData.append("userName", userName);
           formData.append("userId", userId);
 
-          const res = await fetch("http://localhost:4000/api/upload-chunk", {
+          const res = await fetch("https://smart-meeting-assistant-olcl.onrender.com/api/upload-chunk", {
             method: "POST",
             body: formData,
           });
@@ -866,7 +866,7 @@ const MeetingRoom = () => {
       if (globalSocket?.connected)
         globalSocket.emit("end-meeting", { meetingId: mid });
 
-      fetch(`http://localhost:4000/api/meetings/${mid}`, {
+      fetch(`https://smart-meeting-assistant-olcl.onrender.com/api/meetings/${mid}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "completed", endedAt: new Date() }),
@@ -874,7 +874,7 @@ const MeetingRoom = () => {
 
       // ✅ Fire process-recording — don't await (Whisper runs in background)
       // MeetingDetail polls every 10s so transcript appears when Whisper finishes
-      fetch("http://localhost:4000/api/process-recording", {
+      fetch("https://smart-meeting-assistant-olcl.onrender.com/api/process-recording", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ meetingId: mid, userName }),
@@ -1325,3 +1325,4 @@ const MeetingRoom = () => {
 };
 
 export default MeetingRoom;
+

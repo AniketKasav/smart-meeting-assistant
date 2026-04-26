@@ -225,7 +225,7 @@ export const VoiceCommandProvider = ({ children }) => {
   // ── Chatbot bridge ─────────────────────────────────────────────────────────
   const askChatbot = useCallback(async (question) => {
     try {
-      const res = await fetch("http://localhost:4000/api/chat", {
+      const res = await fetch("https://smart-meeting-assistant-olcl.onrender.com/api/chat", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -729,3 +729,4 @@ export const VoiceCommandProvider = ({ children }) => {
 };
 
 export default VoiceCommandContext;
+

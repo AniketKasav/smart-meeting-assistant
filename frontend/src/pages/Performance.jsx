@@ -51,7 +51,7 @@ import {
 import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
 
-const API_BASE = "http://localhost:4000/api";
+const API_BASE = "https://smart-meeting-assistant-olcl.onrender.com/api";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -2197,3 +2197,4 @@ const Performance = () => {
 };
 
 export default Performance;
+

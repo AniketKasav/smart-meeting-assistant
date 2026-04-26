@@ -30,7 +30,7 @@ const Performance = () => {
   const [personalPerformance, setPersonalPerformance] = useState(null);
   const [isHost, setIsHost] = useState(false);
 
-  const API_BASE = 'http://localhost:4000/api';
+  const API_BASE = 'https://smart-meeting-assistant-olcl.onrender.com/api';
 
   // ── FIXED: use getToken() instead of wrong key ────────────────────────────
   const authHeaders = () => ({

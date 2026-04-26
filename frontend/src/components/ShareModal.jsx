@@ -24,7 +24,7 @@ const ShareModal = ({ meeting, onClose }) => {
     try {
       setLoading(true);
 
-      const response = await fetch(`http://localhost:4000/api/export/${meeting._id}/share`, {
+      const response = await fetch(`https://smart-meeting-assistant-olcl.onrender.com/api/export/${meeting._id}/share`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

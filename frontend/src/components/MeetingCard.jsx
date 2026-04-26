@@ -70,7 +70,7 @@ const MeetingCard = ({ meeting, onRefresh }) => {
       // ✅ FIX: use accessToken not token
       const token = localStorage.getItem("accessToken");
       const response = await fetch(
-        `http://localhost:4000/api/meetings/${meeting.meetingId}`,
+        `https://smart-meeting-assistant-olcl.onrender.com/api/meetings/${meeting.meetingId}`,
         {
           method: "DELETE",
           headers: {
@@ -196,3 +196,4 @@ const MeetingCard = ({ meeting, onRefresh }) => {
 };
 
 export default MeetingCard;
+

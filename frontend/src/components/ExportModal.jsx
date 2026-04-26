@@ -26,15 +26,15 @@ const ExportModal = ({ meeting, onClose }) => {
 
       switch (exportFormat) {
         case 'pdf':
-          url = `http://localhost:4000/api/export/${meeting.meetingId}/pdf?includeTranscript=${includeTranscript}`;
+          url = `https://smart-meeting-assistant-olcl.onrender.com/api/export/${meeting.meetingId}/pdf?includeTranscript=${includeTranscript}`;
           filename = `meeting-${meeting.meetingId}.pdf`;
           break;
         case 'json':
-          url = `http://localhost:4000/api/export/${meeting.meetingId}/json?includeTranscript=${includeTranscript}`;
+          url = `https://smart-meeting-assistant-olcl.onrender.com/api/export/${meeting.meetingId}/json?includeTranscript=${includeTranscript}`;
           filename = `meeting-${meeting.meetingId}.json`;
           break;
         case 'txt':
-          url = `http://localhost:4000/api/export/${meeting.meetingId}/txt`;
+          url = `https://smart-meeting-assistant-olcl.onrender.com/api/export/${meeting.meetingId}/txt`;
           filename = `transcript-${meeting.meetingId}.txt`;
           break;
         default:

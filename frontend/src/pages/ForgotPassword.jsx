@@ -16,7 +16,7 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      const res = await axios.post('http://localhost:4000/api/auth/forgot-password', { email });
+      const res = await axios.post('https://smart-meeting-assistant-olcl.onrender.com/api/auth/forgot-password', { email });
       setMessage('Password reset link sent to your email');
       setEmailSent(true);
       // For development: log reset URL (no alert or redirect)

@@ -311,3 +311,4 @@ export function useWakeWord({ onWake, enabled = true } = {}) {
 }
 
 export default useWakeWord;
+

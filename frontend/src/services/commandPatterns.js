@@ -389,3 +389,4 @@ export const getCommandCategories = () => ({
     "Any natural question — FRIDAY routes it to the AI chatbot",
   ],
 });
+

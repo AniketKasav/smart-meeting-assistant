@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
 import SimplePeer from 'simple-peer';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const SOCKET_URL = import.meta.env.VITE_API_URL || 'https://smart-meeting-assistant-olcl.onrender.com';
 
 // Global singleton to prevent multiple connections
 let globalSocket = null;

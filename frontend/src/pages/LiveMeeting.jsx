@@ -16,7 +16,7 @@ const LiveMeeting = () => {
   const handleQuickStart = async () => {
     setIsCreating(true);
     try {
-      const response = await fetch('http://localhost:4000/api/meetings', {
+      const response = await fetch('https://smart-meeting-assistant-olcl.onrender.com/api/meetings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -47,7 +47,7 @@ const LiveMeeting = () => {
     setIsCreating(true);
     
     try {
-      const response = await fetch('http://localhost:4000/api/meetings', {
+      const response = await fetch('https://smart-meeting-assistant-olcl.onrender.com/api/meetings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

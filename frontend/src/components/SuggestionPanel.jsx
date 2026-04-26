@@ -14,7 +14,7 @@ export default function SuggestionPanel({ userId, onClose }) {
 
   const fetchMorningBriefing = async () => {
     try {
-      const response = await fetch(`http://localhost:4000/api/suggestions/briefing/${userId}`, {
+      const response = await fetch(`https://smart-meeting-assistant-olcl.onrender.com/api/suggestions/briefing/${userId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

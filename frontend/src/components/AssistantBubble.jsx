@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Sparkles, X, Send, RotateCcw, GripHorizontal, Zap } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:4000';
+const API_BASE_URL = 'https://smart-meeting-assistant-olcl.onrender.com';
 
 const FRIDAY_STYLES = `
   @keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }

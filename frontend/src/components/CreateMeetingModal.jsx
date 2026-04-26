@@ -45,7 +45,7 @@ const CreateMeetingModal = ({ isOpen, onClose }) => {
       // ✅ FIX: add auth token so host is set correctly
       const token = localStorage.getItem("accessToken");
 
-      const response = await fetch("http://localhost:4000/api/meetings", {
+      const response = await fetch("https://smart-meeting-assistant-olcl.onrender.com/api/meetings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -370,3 +370,4 @@ const CreateMeetingModal = ({ isOpen, onClose }) => {
 };
 
 export default CreateMeetingModal;
+

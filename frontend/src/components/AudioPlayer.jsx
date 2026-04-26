@@ -327,3 +327,4 @@ const AudioPlayer = ({ audioUrl, meetingTitle, duration }) => {
 };
 
 export default AudioPlayer;
+

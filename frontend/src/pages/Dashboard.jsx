@@ -116,7 +116,7 @@ const Dashboard = () => {
       const newMeetingId = `meeting_${Date.now()}`;
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('http://localhost:4000/api/meetings', {
+      const response = await fetch('https://smart-meeting-assistant-olcl.onrender.com/api/meetings', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -359,3 +359,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

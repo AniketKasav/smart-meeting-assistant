@@ -68,3 +68,4 @@ function _notify() {
 }
 
 export default micLock;
+

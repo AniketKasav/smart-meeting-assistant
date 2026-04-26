@@ -246,3 +246,4 @@ const getErrorMessage = (errorType) => {
 };
 
 export default useSpeechRecognition;
+

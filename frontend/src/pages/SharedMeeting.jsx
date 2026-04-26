@@ -39,7 +39,7 @@ const SharedMeeting = () => {
       setError("");
 
       const response = await fetch(
-        `http://localhost:4000/api/export/shared/${token}`,
+        `https://smart-meeting-assistant-olcl.onrender.com/api/export/shared/${token}`,
         {
           method: "POST",
           headers: {
@@ -450,3 +450,4 @@ const SharedMeeting = () => {
 };
 
 export default SharedMeeting;
+

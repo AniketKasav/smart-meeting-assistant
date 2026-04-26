@@ -291,7 +291,7 @@ const MeetingDetail = () => {
 
       const token = getToken();
       const response = await fetch(
-        `http://localhost:4000/api/translate/${meetingId}`,
+        `https://smart-meeting-assistant-olcl.onrender.com/api/translate/${meetingId}`,
         {
           method: "POST",
           headers: {
@@ -533,7 +533,7 @@ const MeetingDetail = () => {
     try {
       setRunningDiarization(true);
       const response = await fetch(
-        `http://localhost:4000/api/diarization/${meeting.meetingId}/run`,
+        `https://smart-meeting-assistant-olcl.onrender.com/api/diarization/${meeting.meetingId}/run`,
         { method: "POST", headers: { Authorization: `Bearer ${getToken()}` } },
       );
       if (!response.ok) {
@@ -902,7 +902,7 @@ const MeetingDetail = () => {
         {audioUrl && (
           <div className="mb-6">
             <AudioPlayer
-              audioUrl={`http://localhost:4000${audioUrl}`}
+              audioUrl={`https://smart-meeting-assistant-olcl.onrender.com${audioUrl}`}
               meetingTitle={meeting.title}
               duration={meeting.transcripts?.[0]?.duration || meeting.duration}
             />
@@ -1239,3 +1239,4 @@ const MeetingDetail = () => {
 };
 
 export default MeetingDetail;
+
