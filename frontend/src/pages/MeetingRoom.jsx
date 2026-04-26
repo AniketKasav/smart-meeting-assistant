@@ -453,6 +453,9 @@ const MeetingRoom = () => {
             cleanupAndNavigate();
           });
 
+          globalSocket.on("live-transcript-segment", (segment) => {
+            setLiveTranscript((prev) => [...prev, segment]);
+          });
           globalSocket.on("force-leave", () => cleanupAndNavigate());
 
           globalSocket.on("live-transcript-translation", (data) => {
@@ -1350,6 +1353,7 @@ const MeetingRoom = () => {
 };
 
 export default MeetingRoom;
+
 
 
 
