@@ -1311,11 +1311,11 @@ const MeetingRoom = () => {
               )}
             </button>
             <button
-              onClick={handleEndMeeting}
-              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors flex items-center gap-2"
+              onClick={meeting?.createdBy === user?._id || meeting?.createdBy === user?.id ? handleEndMeeting : handleLeaveMeeting}
+              className={`px-6 py-3 text-white rounded-lg font-semibold transition-colors flex items-center gap-2 ${meeting?.createdBy === user?._id || meeting?.createdBy === user?.id ? "bg-red-600 hover:bg-red-700" : "bg-orange-600 hover:bg-orange-700"}`}
             >
               <PhoneOff className="w-5 h-5" />
-              End Meeting
+              {meeting?.createdBy === user?._id || meeting?.createdBy === user?.id ? "End Meeting" : "Leave Meeting"}
             </button>
           </div>
 
@@ -1350,6 +1350,8 @@ const MeetingRoom = () => {
 };
 
 export default MeetingRoom;
+
+
 
 
 
