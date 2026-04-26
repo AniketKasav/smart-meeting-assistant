@@ -77,6 +77,13 @@ const debugRouter = require("./routes/debug");
 //   await doc.save();
 //   console.log(
 //     `✅ Live segment saved [${storedLanguage}] (${doc.segments.length} total)`,
+        socket.to(meetingId).emit('live-transcript-segment', {
+          id: socket.id + '-' + Date.now(),
+          text: trimmedText,
+          speaker: segUserName || 'Unknown',
+          language: incomingLangBase,
+          timestamp: timestamp || Date.now(),
+        });
 //   );
 // } catch (err) {
 //   // ✅ FIX: Log the FULL error (not just message) so Mongoose validation
@@ -2148,6 +2155,13 @@ io.on("connection", (socket) => {
         doc.markModified("segments");
         await doc.save();
         console.log(`✅ Live segment saved (${doc.segments.length} total)`);
+        socket.to(meetingId).emit('live-transcript-segment', {
+          id: socket.id + '-' + Date.now(),
+          text: trimmedText,
+          speaker: segUserName || 'Unknown',
+          language: incomingLangBase,
+          timestamp: timestamp || Date.now(),
+        });
       } catch (err) {
         console.error("❌ Failed to save live segment:", err);
       }

@@ -14,7 +14,7 @@ The application now uses **VOSK** for fast, real-time live transcription with mi
 
 ### 1. Install Python Dependencies
 
-```bash
+```bashcls
 # Navigate to backend directory
 cd backend
 
