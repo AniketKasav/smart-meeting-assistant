@@ -77,13 +77,13 @@ const debugRouter = require("./routes/debug");
 //   await doc.save();
 //   console.log(
 //     `✅ Live segment saved [${storedLanguage}] (${doc.segments.length} total)`,
-        socket.to(meetingId).emit('live-transcript-segment', {
-          id: socket.id + '-' + Date.now(),
-          text: trimmedText,
-          speaker: segUserName || 'Unknown',
-          language: incomingLangBase,
-          timestamp: timestamp || Date.now(),
-        });
+// socket.to(meetingId).emit('live-transcript-segment', {
+//   id: socket.id + '-' + Date.now(),
+//   text: trimmedText,
+//   speaker: segUserName || 'Unknown',
+//   language: incomingLangBase,
+//   timestamp: timestamp || Date.now(),
+// });
 //   );
 // } catch (err) {
 //   // ✅ FIX: Log the FULL error (not just message) so Mongoose validation
@@ -134,13 +134,21 @@ const MONGO_SAFE_LANGS = new Set([
 const app = express();
 
 app.use((req, res, next) => {
-  const allowed = ['https://smart-meeting-assistant-psi.vercel.app','https://smartmeetai.in','https://www.smartmeetai.in'];
+  const allowed = [
+    "https://smart-meeting-assistant-psi.vercel.app",
+    "https://smartmeetai.in",
+    "https://www.smartmeetai.in",
+  ];
   const origin = req.headers.origin;
-  if (allowed.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  if (allowed.includes(origin))
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,DELETE,OPTIONS,PATCH",
+  );
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  if (req.method === "OPTIONS") return res.sendStatus(200);
   next();
 });
 
@@ -2155,10 +2163,10 @@ io.on("connection", (socket) => {
         doc.markModified("segments");
         await doc.save();
         console.log(`✅ Live segment saved (${doc.segments.length} total)`);
-        socket.to(meetingId).emit('live-transcript-segment', {
-          id: socket.id + '-' + Date.now(),
+        socket.to(meetingId).emit("live-transcript-segment", {
+          id: socket.id + "-" + Date.now(),
           text: trimmedText,
-          speaker: segUserName || 'Unknown',
+          speaker: segUserName || "Unknown",
           language: incomingLangBase,
           timestamp: timestamp || Date.now(),
         });
@@ -2886,14 +2894,3 @@ server.listen(PORT, () => {
   ╚══════════════════════════════════════════════════════╝
     `);
 });
-
-
-
-
-
-
-
-
-
-
-
