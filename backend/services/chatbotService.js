@@ -2,7 +2,8 @@
 const Meeting = require('../models/Meeting');
 const Transcript = require('../models/Transcript');
 
-const OLLAMA_URL = 'http://localhost:11434';
+const Groq = require('groq-sdk');
+const groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // ============================================
 // QUERY INTENT DETECTION
@@ -256,46 +257,18 @@ async function generateChatResponseStream(userQuery, conversationHistory = [], o
 
     const prompt = buildPrompt(intent, userQuery, context, historyText);
 
-    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'llama3.2',
-        prompt,
-        stream: true,
-        options: {
-          temperature: 0.5,
-          top_p: 0.9,
-          num_predict: 500,
-          num_ctx: 4096
-        }
-      })
+    const stream = await groqClient.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.5,
+      max_tokens: 500,
+      stream: true,
     });
-
-    if (!response.ok) throw new Error(`Ollama error: ${response.status}`);
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
     let fullResponse = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n').filter(l => l.trim());
-
-      for (const line of lines) {
-        try {
-          const parsed = JSON.parse(line);
-          if (parsed.response) {
-            fullResponse += parsed.response;
-            if (onChunk) onChunk(parsed.response);
-          }
-        } catch (e) { /* skip malformed lines */ }
-      }
+    for await (const chunk of stream) {
+      const text = chunk.choices[0]?.delta?.content || '';
+      if (text) { fullResponse += text; if (onChunk) onChunk(text); }
     }
-
     return { response: fullResponse.trim(), sources: sources.slice(0, 3), hasContext: true };
 
   } catch (error) {
@@ -351,7 +324,7 @@ async function generateChatResponse(userQuery, conversationHistory = []) {
   } catch (error) {
     console.error('❌ Chatbot error:', error);
     return {
-      response: "I'm having trouble connecting to the AI service. Please make sure Ollama is running at http://localhost:11434 and try again.",
+      response: "I'm having trouble generating a response. Please try again.",
       sources: [],
       hasContext: false,
       error: error.message
@@ -390,3 +363,5 @@ module.exports = {
   getActionItems,
   getParticipantInfo
 };
+
+
