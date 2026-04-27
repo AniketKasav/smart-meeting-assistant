@@ -9,6 +9,7 @@ const loginLimiter = rateLimit({
     error: 'Too many login attempts. Please try again after 15 minutes.'
   },
   standardHeaders: true,
+  validate: { trustProxy: false },
   legacyHeaders: false,
   skipSuccessfulRequests: false, // Count successful requests
   handler: (req, res) => {
@@ -29,6 +30,7 @@ const registerLimiter = rateLimit({
     error: 'Too many registration attempts. Please try again later.'
   },
   standardHeaders: true,
+  validate: { trustProxy: false },
   legacyHeaders: false,
   handler: (req, res) => {
     console.log(`🚫 Registration rate limit exceeded for IP: ${req.ip}`);
@@ -48,6 +50,7 @@ const passwordResetLimiter = rateLimit({
     error: 'Too many password reset attempts. Please try again later.'
   },
   standardHeaders: true,
+  validate: { trustProxy: false },
   legacyHeaders: false,
   handler: (req, res) => {
     console.log(`🚫 Password reset rate limit exceeded for IP: ${req.ip}`);
@@ -67,6 +70,7 @@ const apiLimiter = rateLimit({
     error: 'Too many requests. Please slow down.'
   },
   standardHeaders: true,
+  validate: { trustProxy: false },
   legacyHeaders: false,
   handler: (req, res) => {
     console.log(`🚫 API rate limit exceeded for IP: ${req.ip}`);
@@ -86,6 +90,7 @@ const strictLimiter = rateLimit({
     error: 'Please wait before trying again.'
   },
   standardHeaders: true,
+  validate: { trustProxy: false },
   legacyHeaders: false,
   handler: (req, res) => {
     console.log(`🚫 Strict rate limit exceeded for IP: ${req.ip}`);
@@ -104,3 +109,4 @@ module.exports = {
   apiLimiter,
   strictLimiter
 };
+
