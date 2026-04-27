@@ -19,7 +19,7 @@ router.get("/", async (req, res) => {
     const { status, priority, assignee, meetingId, fromDate, toDate, overdue } =
       req.query;
     const userId = req.user.userId;
-    const userName = req.user.name;
+    const userDoc = await User.findById(req.user.userId).select("name").lean();     const userName = userDoc?.name || "Unknown";
 
     const meetings = await Meeting.find({
       $or: [{ "host.userId": userId }, { "participants.userId": userId }],
@@ -117,7 +117,7 @@ router.get("/", async (req, res) => {
 router.get("/assignees", async (req, res) => {
   try {
     const userId = req.user.userId;
-    const userName = req.user.name;
+    const userDoc = await User.findById(req.user.userId).select("name").lean();     const userName = userDoc?.name || "Unknown";
 
     const hostedMeeting = await Meeting.findOne({ "host.userId": userId });
     const isHostSomewhere = !!hostedMeeting;
@@ -266,7 +266,7 @@ router.put("/:meetingId/:itemId", async (req, res) => {
   try {
     const { meetingId, itemId } = req.params;
     const userId = req.user.userId;
-    const userName = req.user.name;
+    const userDoc = await User.findById(req.user.userId).select("name").lean();     const userName = userDoc?.name || "Unknown";
 
     const meeting = await Meeting.findOne({ meetingId });
     if (!meeting?.summary?.actionItems) {
