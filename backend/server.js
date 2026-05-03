@@ -976,9 +976,23 @@ app.put("/api/meetings/:meetingId/summary/regenerate", async (req, res) => {
       model: summaryData.model,
       keyPoints: summaryData.keyPoints || [],
       decisions: summaryData.decisions || [],
-      actionItems: summaryData.actionItems || [],
+      actionItems: (summaryData.actionItems || []).map((item) => ({
+        ...item,
+        dueDate:
+          item.dueDate && !isNaN(new Date(item.dueDate))
+            ? new Date(item.dueDate)
+            : null,
+      })),
       topics: summaryData.topics || [],
-      sentiment: summaryData.sentiment || "neutral",
+      sentiment: [
+        "positive",
+        "neutral",
+        "negative",
+        "mixed",
+        "confused",
+      ].includes(summaryData.sentiment)
+        ? summaryData.sentiment
+        : "neutral",
       nextSteps: summaryData.nextSteps || [],
       customPrompt: customPrompt,
     };
