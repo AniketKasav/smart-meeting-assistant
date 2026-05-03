@@ -61,7 +61,7 @@ const meetingSchema = new mongoose.Schema({
   autoSentiment: {
     sentiment: {
       type: String,
-      enum: ['positive', 'neutral', 'negative'],
+      enum: ['positive', 'neutral', 'negative', 'mixed', 'confused'],
       default: 'neutral'
     },
     confidence: Number,
@@ -108,7 +108,7 @@ const meetingSchema = new mongoose.Schema({
     topics: [String],
     sentiment: {
       type: String,
-      enum: ['positive', 'neutral', 'negative'],
+      enum: ['positive', 'neutral', 'negative', 'mixed', 'confused'],
       default: 'neutral'
     },
     nextSteps: [String],
@@ -173,3 +173,4 @@ meetingSchema.index({
 });
 
 module.exports = mongoose.model('Meeting', meetingSchema);
+
