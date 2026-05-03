@@ -11,6 +11,8 @@
 [![WebRTC](https://img.shields.io/badge/WebRTC-P2P-333333?style=for-the-badge&logo=webrtc&logoColor=white)](https://webrtc.org)
 [![Groq](https://img.shields.io/badge/Groq-AI-F55036?style=for-the-badge)](https://groq.com)
 
+### 🌐 [Live Demo → www.smartmeetai.in](https://www.smartmeetai.in)
+
 </div>
 
 ---
