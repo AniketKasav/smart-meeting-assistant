@@ -304,67 +304,82 @@ router.put("/:meetingId/:itemId", async (req, res) => {
             error: "You can only update action items assigned to you",
           });
       }
-      if (Object.keys(req.body).some((k) => k !== "status")) {
+      if (Object.keys(req.body).some((k) => k !== "status" && k !== "proofOfWork")) {
         return res
           .status(403)
           .json({ success: false, error: "Members can only update status" });
       }
     }
 
+    // ✅ Apply all updates from request body to the item
     Object.keys(req.body).forEach((key) => {
-      meeting.summary.actionItems[itemIndex][key] = req.body[key];
-    });
-
-    const updatedItem = meeting.summary.actionItems[itemIndex];
-    await meeting.save();
-
-    // ✅ Send email to host when task is marked completed
-    if (req.body.status === 'completed') {
-      // Store proof of work if provided
-      if (req.body.proofOfWork) {
+      if (key === 'proofOfWork' && req.body.proofOfWork) {
+        // Stamp completedAt on proofOfWork before saving
         meeting.summary.actionItems[itemIndex].proofOfWork = {
           note: req.body.proofOfWork.note || '',
           link: req.body.proofOfWork.link || '',
           completedAt: new Date()
         };
-        await meeting.save();
+      } else {
+        meeting.summary.actionItems[itemIndex][key] = req.body[key];
       }
+    });
 
-      // JWT only has {userId, role} — look up name from DB or action item
-      const assigneeUser = await User.findById(userId).select('name').lean().catch(() => null);
+    const updatedItem = meeting.summary.actionItems[itemIndex];
+    await meeting.save(); // single save — no duplicate
+
+    // ✅ Send email to host when task is marked completed
+    if (req.body.status === 'completed') {
+      // Look up who completed the task
+      const assigneeUser = await User.findById(userId).select('name email').lean().catch(() => null);
       const completedByName = assigneeUser?.name || item.assignee || 'A team member';
 
       console.log(`🔔 Action item "${updatedItem.title}" marked completed by ${completedByName}`);
+      console.log(`🔍 Looking up host — stored userId: "${meeting.host.userId}", name: "${meeting.host.name}"`);
+
       try {
-        // Look up host user by _id first, fallback to name
         let hostUser = null;
+
+        // Strategy 1: findById (works when userId is a valid ObjectId string)
         try {
-          hostUser = await User.findById(meeting.host.userId).lean();
-        } catch (e) {
-          // _id format might not be valid ObjectId
-        }
+          hostUser = await User.findById(meeting.host.userId).select('name email').lean();
+        } catch (_) { /* invalid ObjectId format — try next strategy */ }
+
+        // Strategy 2: find by userId field stored as string
         if (!hostUser) {
-          hostUser = await User.findOne({ name: meeting.host.name }).lean();
+          hostUser = await User.findOne({ _id: meeting.host.userId }).select('name email').lean().catch(() => null);
         }
 
-        console.log(`👤 Host lookup: ${hostUser ? `${hostUser.name} <${hostUser.email}>` : 'NOT FOUND'}`);
+        // Strategy 3: find by exact name match
+        if (!hostUser) {
+          hostUser = await User.findOne({ name: meeting.host.name }).select('name email').lean().catch(() => null);
+        }
+
+        // Strategy 4: find by case-insensitive name match
+        if (!hostUser) {
+          hostUser = await User.findOne({
+            name: { $regex: `^${meeting.host.name.trim()}$`, $options: 'i' }
+          }).select('name email').lean().catch(() => null);
+        }
 
         if (hostUser?.email) {
-          // Fire-and-forget — don't block the response
+          console.log(`👤 Host found: ${hostUser.name} <${hostUser.email}>`);
+          // Fire-and-forget — don't block the HTTP response
           sendActionItemCompletedEmail({
             hostEmail: hostUser.email,
-            hostName: meeting.host.name,
+            hostName: hostUser.name,
             assigneeName: completedByName,
             taskTitle: updatedItem.title,
             taskDescription: updatedItem.description,
             meetingTitle: meeting.title,
             meetingId: meeting.meetingId,
             proofOfWork: req.body.proofOfWork || null,
-          }).then(() => {
-            console.log(`✅ Completion email sent to ${hostUser.email}`);
-          }).catch(err => console.error('❌ Completion email error:', err.message));
+          })
+            .then(() => console.log(`✅ Completion email sent to ${hostUser.email}`))
+            .catch(err => console.error('❌ Completion email send error:', err.message));
         } else {
-          console.log('⚠️ No host email found — skipping notification');
+          console.warn(`⚠️ Host user not found in DB for meeting "${meeting.title}" — email skipped.`);
+          console.warn(`   Tried userId: ${meeting.host.userId} | name: ${meeting.host.name}`);
         }
       } catch (emailErr) {
         console.error('❌ Could not send completion email:', emailErr.message);

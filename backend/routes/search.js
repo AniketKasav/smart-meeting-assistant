@@ -176,32 +176,37 @@ router.get('/suggestions', async (req, res) => {
       });
     }
 
-    // Get meetings with titles matching the query
-    const meetings = await Meeting.find({
-      title: { $regex: q, $options: 'i' }
-    })
-      .select('title')
-      .limit(5)
-      .lean();
+    // Run all three queries in parallel; individual failures won't crash the response
+    const [meetings, participantAgg, topicsAgg] = await Promise.all([
+      // Get meetings with titles matching the query
+      Meeting.find({ title: { $regex: q, $options: 'i' } })
+        .select('title')
+        .limit(5)
+        .lean()
+        .catch(() => []),
 
-    // Get participants matching the query
-    const participants = await Transcript.distinct('userName', {
-      userName: { $regex: q, $options: 'i' }
-    }).limit(5);
+      // ✅ FIX: .distinct() returns a plain Promise — cannot chain .limit() on it.
+      // Use an aggregation pipeline instead so $limit works correctly.
+      Transcript.aggregate([
+        { $match: { userName: { $regex: q, $options: 'i' } } },
+        { $group: { _id: '$userName' } },
+        { $limit: 5 }
+      ]).catch(() => []),
 
-    // Get common topics from summaries
-    const topicsAgg = await Meeting.aggregate([
-      { $match: { 'summary.topics': { $exists: true } } },
-      { $unwind: '$summary.topics' },
-      { $match: { 'summary.topics': { $regex: q, $options: 'i' } } },
-      { $group: { _id: '$summary.topics', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 5 }
+      // Get common topics from summaries
+      Meeting.aggregate([
+        { $match: { 'summary.topics': { $exists: true, $ne: [] } } },
+        { $unwind: '$summary.topics' },
+        { $match: { 'summary.topics': { $regex: q, $options: 'i' } } },
+        { $group: { _id: '$summary.topics', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 }
+      ]).catch(() => [])
     ]);
 
     const suggestions = [
       ...meetings.map(m => ({ type: 'meeting', text: m.title })),
-      ...participants.map(p => ({ type: 'participant', text: p })),
+      ...participantAgg.map(p => ({ type: 'participant', text: p._id })),
       ...topicsAgg.map(t => ({ type: 'topic', text: t._id }))
     ];
 
