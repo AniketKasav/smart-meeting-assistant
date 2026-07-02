@@ -396,8 +396,6 @@ router.get('/feedback', authenticateToken, async (req, res) => {
       if (f.feedbackType === 'dislike') intentStats[f.intent].dislikes++;
     });
 
-    console.log(`✅ Fetched ${feedbacks.length} feedback records`);
-
     res.json({
       success: true,
       feedbacks,
@@ -511,8 +509,6 @@ router.post('/search', authenticateToken, async (req, res) => {
       });
     }
 
-    console.log('🔍 AI Search query:', query);
-
     // Parse natural language query with AI
     const searchParams = await aiService.parseNaturalLanguageSearch(query);
 
@@ -615,8 +611,6 @@ router.post('/summarize', authenticateToken, async (req, res) => {
       });
     }
 
-    console.log('📝 Generating summary for:', meetingId || title);
-
     // Find meeting
     const Meeting = require('../models/Meeting');
     let meeting;
@@ -707,8 +701,6 @@ router.post('/bulk-tasks', authenticateToken, async (req, res) => {
         error: 'Command is required'
       });
     }
-
-    console.log('📦 Bulk task command:', command);
 
     // Parse bulk command with AI
     const parsed = await aiService.parseBulkTaskCommand(command);

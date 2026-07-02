@@ -140,15 +140,12 @@ export const VoiceCommandProvider = ({ children }) => {
     micOpenRef.current = true;
     resetTranscriptRef.current?.();
     startSpeechRef.current();
-    console.log("[FRIDAY] Mic opened");
   }, []);
 
   // ── emergencyStop ──────────────────────────────────────────────────────────
   const emergencyStop = useCallback(() => {
     if (isStoppingRef.current) return;
     isStoppingRef.current = true;
-    console.log("[FRIDAY] STOP");
-
     window.speechSynthesis.cancel();
     try {
       stopSpeechRef.current?.();
@@ -283,8 +280,6 @@ export const VoiceCommandProvider = ({ children }) => {
 
       setIsProcessing(true);
       const normalized = normalizeForMatching(text);
-      console.log("[FRIDAY] raw:", text, "→ normalized:", normalized);
-
       // System commands
       if (MUTE_PATTERN.test(lower) || MUTE_PATTERN.test(normalized)) {
         mute();
@@ -320,8 +315,6 @@ export const VoiceCommandProvider = ({ children }) => {
         intentMatcher.match(normalized) || intentMatcher.match(lower);
 
       if (match && match.confidence > 0.7) {
-        console.log("[FRIDAY] Intent:", match.intent);
-
         if (match.intent === "CREATE_MEETING") {
           conversationStateRef.current = {
             flow: "CREATE_MEETING",
@@ -556,8 +549,6 @@ export const VoiceCommandProvider = ({ children }) => {
         return;
       }
       window.speechSynthesis.cancel();
-      console.log("[FRIDAY] Heard:", finalTranscript);
-
       micOpenRef.current = false;
 
       if (conversationStateRef.current) {
@@ -588,7 +579,6 @@ export const VoiceCommandProvider = ({ children }) => {
   }, []);
 
   const handleEnd = useCallback(() => {
-    console.log("[FRIDAY] Mic closed");
     micOpenRef.current = false;
     micLock.release("friday");
     setIsProcessing(false);
@@ -627,7 +617,6 @@ export const VoiceCommandProvider = ({ children }) => {
   // ── handleWakeWord ─────────────────────────────────────────────────────────
   const handleWakeWord = useCallback(
     (phrase, commandText = "") => {
-      console.log("[FRIDAY] Wake:", phrase, "| cmd:", commandText || "(none)");
       if (commandText && STOP_PATTERN.test(commandText.toLowerCase())) {
         emergencyStop();
         return;
@@ -635,7 +624,6 @@ export const VoiceCommandProvider = ({ children }) => {
 
       // PATH A: inline command — run directly
       if (commandText && commandText.length >= 3) {
-        console.log("[FRIDAY] Inline:", commandText);
         setFridayAwake(false);
         setTimeout(() => processCommandRef.current?.(commandText), 100);
         return;
@@ -648,7 +636,6 @@ export const VoiceCommandProvider = ({ children }) => {
         micLock.forceRelease();
       }
 
-      console.log("[FRIDAY] Bare wake — opening mic");
       setFridayAwake(true);
       setTimeout(() => {
         openCommandMic();

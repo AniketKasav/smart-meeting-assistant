@@ -54,30 +54,21 @@ const clearTokenCookies = (res) => {
 // Register
 router.post('/register', registerLimiter, validate('register'), async (req, res) => {
   try {
-    console.log('📝 Registration attempt:', req.body);
-    
     const { email, password, name } = req.body;
 
-    console.log('🔍 Checking existing user...');
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      console.log('❌ Email already exists');
       return res.status(409).json({ error: 'Email already registered' });
     }
 
-    console.log('✅ Creating new user...');
     const user = new User({ email, password, name });
     
-    console.log('💾 Saving user...');
     await user.save();
-    console.log('✅ User saved:', user._id);
-
     // 👇 Send welcome email
     sendWelcomeEmail(user.email, user.name).catch(err => 
       console.error('Failed to send welcome email:', err)
     );
 
-    console.log('🔐 Generating tokens...');
     const { accessToken, refreshToken } = generateTokens(user._id, user.role);
     user.refreshToken = refreshToken;
     await user.save();
@@ -85,7 +76,6 @@ router.post('/register', registerLimiter, validate('register'), async (req, res)
     // Set secure cookies
     setTokenCookies(res, accessToken, refreshToken);
 
-    console.log('✅ Registration complete');
     res.status(201).json({
       message: 'Registration successful',
       accessToken, // Still return for localStorage compatibility
@@ -296,25 +286,17 @@ router.delete('/account', authenticateToken, async (req, res) => {
 router.post('/forgot-password', passwordResetLimiter, validate('forgotPassword'), async (req, res) => {
   try {
     const { email } = req.body;
-    console.log('📧 Password reset requested for:', email);
-    
     const user = await User.findOne({ email });
     
     if (!user) {
-      console.log('❌ User not found');
       return res.json({ message: 'If email exists, reset link sent' });
     }
     
     const resetToken = crypto.randomBytes(32).toString('hex');
-    console.log('🔑 RESET TOKEN:', resetToken);
-    
     user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
     user.passwordResetExpiry = Date.now() + 3600000;
     await user.save();
     
-    console.log('✅ Token saved to database');
-    console.log('🔗 Reset URL: http://localhost:5173/reset-password?token=' + resetToken);
-
     // 👇 Send password reset email
     sendPasswordResetEmail(user.email, user.name, resetToken).catch(err =>
       console.error('Failed to send reset email:', err)
@@ -334,8 +316,6 @@ router.post('/reset-password', passwordResetLimiter, validate('resetPassword'), 
   try {
     const { token, newPassword } = req.body;
     
-    console.log('🔐 Password reset attempt');
-    
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     
     const user = await User.findOne({
@@ -344,19 +324,14 @@ router.post('/reset-password', passwordResetLimiter, validate('resetPassword'), 
     });
     
     if (!user) {
-      console.log('❌ Invalid or expired token');
       return res.status(400).json({ error: 'Invalid or expired token' });
     }
-    
-    console.log('✅ Valid token found for user:', user.email);
     
     user.password = newPassword;
     user.passwordResetToken = undefined;
     user.passwordResetExpiry = undefined;
     await user.save();
     
-    console.log('✅ Password updated successfully');
-        
       // 👇 Send password changed confirmation email
       sendPasswordChangedEmail(user.email, user.name).catch(err =>
         console.error('Failed to send confirmation email:', err)
@@ -382,14 +357,12 @@ module.exports = router;
 // Test email endpoint
 router.get('/test-email', async (req, res) => {
   try {
-    console.log('🧪 Testing email service...');
     const { sendPasswordResetEmail } = require('../services/emailService');
     await sendPasswordResetEmail(
       'kasavaniket15@gmail.com',  // Your email
       'Test User',
       'test-token-12345'
     );
-    console.log('✅ Test email sent successfully!');
     res.json({ success: true, message: 'Email sent! Check inbox.' });
   } catch (error) {
     console.error('❌ Email test failed:', error.message);

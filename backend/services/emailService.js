@@ -138,7 +138,6 @@ const sendWelcomeEmail = async (userEmail, userName) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log('✅ Welcome email sent to:', userEmail);
     return true;
   } catch (error) {
     console.error('❌ Failed to send welcome email:', error);
@@ -257,7 +256,6 @@ const sendPasswordResetEmail = async (userEmail, userName, resetToken) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log('✅ Password reset email sent to:', userEmail);
     return true;
   } catch (error) {
     console.error('❌ Failed to send password reset email:', error);
@@ -344,7 +342,6 @@ const sendPasswordChangedEmail = async (userEmail, userName) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log('✅ Password changed email sent to:', userEmail);
     return true;
   } catch (error) {
     console.error('❌ Failed to send password changed email:', error);
@@ -430,7 +427,6 @@ const sendActionItemCompletedEmail = async ({
     };
 
     await transporter.sendMail(mailOptions);
-    console.log('✅ Action item completion email sent to:', hostEmail);
     return true;
   } catch (error) {
     console.error('❌ Failed to send action item completion email:', error);

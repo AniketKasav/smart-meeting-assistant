@@ -117,8 +117,6 @@ function startAssemblyLive(socket, meetingId, userName = "Unknown", targetLang =
 
   ws.on("message", (msg) => {
     const raw = msg.toString();
-    console.log("📨 AssemblyAI →", raw.substring(0, 120));
-
     try {
       const data = JSON.parse(raw);
       const type = data.type || data.message_type;
@@ -137,7 +135,6 @@ function startAssemblyLive(socket, meetingId, userName = "Unknown", targetLang =
 
         // ✅ Flush any audio that arrived before we were ready
         if (audioQueue.length > 0) {
-          console.log(`📤 Flushing ${audioQueue.length} queued audio chunks`);
           for (const chunk of audioQueue) {
             if (ws.readyState === 1) ws.send(chunk);
           }
@@ -161,11 +158,9 @@ function startAssemblyLive(socket, meetingId, userName = "Unknown", targetLang =
         if (isFinal) {
           const lower = trimmed.toLowerCase().replace(/[.,!?。]/g, "").trim();
           if (HALLUCINATION_PHRASES.has(lower)) {
-            console.log(`🚫 Hallucination filtered: "${trimmed}"`);
             return;
           }
           if (trimmed.split(/\s+/).length === 1 && trimmed.length <= 3) {
-            console.log(`🚫 Too short, likely noise: "${trimmed}"`);
             return;
           }
         }
@@ -202,10 +197,8 @@ function startAssemblyLive(socket, meetingId, userName = "Unknown", targetLang =
             const targetName = LANG_NAMES[targetLangBase] || targetLangBase;
             const timestampId = Date.now();
 
-            console.log(`🌐 Translating ${sourceName} → ${targetName} (async)...`);
             translateText(text.trim(), sourceName, targetName).then((translated) => {
               if (translated && translated !== text.trim()) {
-                console.log(`✅ Translation: "${translated.substring(0, 60)}"`);
                 socket.emit("live-transcript-translation", {
                   originalText: text.trim(),
                   translatedText: translated,
@@ -237,7 +230,6 @@ function startAssemblyLive(socket, meetingId, userName = "Unknown", targetLang =
       if (type === "FinalTranscript" || type === "final_transcript") {
         const text = data.text || data.transcript;
         if (text && text.trim()) {
-          console.log("✅ Final:", text);
           socket.emit("live-transcript", {
             type: "final",
             text: text.trim(),
@@ -254,7 +246,6 @@ function startAssemblyLive(socket, meetingId, userName = "Unknown", targetLang =
         return;
 
       if (type === "SessionTerminated" || type === "session_terminated") {
-        console.log("✅ Session terminated cleanly");
         return;
       }
 
@@ -279,8 +270,6 @@ function startAssemblyLive(socket, meetingId, userName = "Unknown", targetLang =
     isReady = false;
     audioQueue.length = 0;
     const reasonStr = reason?.toString() || "none";
-    console.log(`🔴 AssemblyAI closed | Code: ${code} | Reason: ${reasonStr}`);
-
     if (liveTranscriptDoc?.segments?.length > 0) {
       try {
         liveTranscriptDoc.processingStatus = "completed";

@@ -28,21 +28,17 @@ export const useWebRTC = (meetingId, userId, userName) => {
   const initializeMedia = useCallback(async () => {
     // Return existing stream if available
     if (globalStream) {
-      console.log('✅ Using existing media stream');
       setLocalStream(globalStream);
       setIsConnecting(false);
       return globalStream;
     }
 
     if (connectionInProgress) {
-      console.log('⏳ Media initialization already in progress...');
       return null;
     }
 
     try {
       connectionInProgress = true;
-      console.log('🎥 Requesting camera and microphone...');
-      
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1280 },
@@ -55,7 +51,6 @@ export const useWebRTC = (meetingId, userId, userName) => {
         }
       });
 
-      console.log('✅ Got media stream');
       globalStream = stream;
       
       if (isMountedRef.current) {
@@ -85,11 +80,8 @@ export const useWebRTC = (meetingId, userId, userName) => {
 
     // Prevent duplicate peer connections
     if (peersRef.current[participant.socketId]) {
-      console.log('⚠️ Peer connection already exists for', participant.socketId);
       return;
     }
-
-    console.log(`🔗 Creating peer connection with ${participant.userName} (initiator: ${initiator})`);
 
     const peer = new SimplePeer({
       initiator,
@@ -123,13 +115,11 @@ export const useWebRTC = (meetingId, userId, userName) => {
       if (!globalSocket || !isMountedRef.current) return;
       
       if (signal.type === 'offer') {
-        console.log('📤 Sending offer to:', participant.socketId);
         globalSocket.emit('offer', {
           to: participant.socketId,
           offer: signal
         });
       } else if (signal.type === 'answer') {
-        console.log('📤 Sending answer to:', participant.socketId);
         globalSocket.emit('answer', {
           to: participant.socketId,
           answer: signal
@@ -145,8 +135,6 @@ export const useWebRTC = (meetingId, userId, userName) => {
 
     // Handle stream
     peer.on('stream', (remoteStream) => {
-      console.log('📹 Received stream from:', participant.userName);
-      
       if (!isMountedRef.current) return;
       
       setPeers((prevPeers) => {
@@ -178,7 +166,6 @@ export const useWebRTC = (meetingId, userId, userName) => {
 
     // Handle connection close
     peer.on('close', () => {
-      console.log('🔌 Peer connection closed:', participant.socketId);
     });
 
     // Store peer reference
@@ -202,14 +189,11 @@ export const useWebRTC = (meetingId, userId, userName) => {
 
     // Prevent multiple initializations
     if (hasJoinedRef.current) {
-      console.log('⚠️ Already joined meeting, skipping...');
       return;
     }
 
     hasJoinedRef.current = true;
     isMountedRef.current = true;
-
-    console.log('🔌 Initializing WebRTC connection...');
 
     // Initialize media first
     initializeMedia().then((stream) => {
@@ -217,13 +201,10 @@ export const useWebRTC = (meetingId, userId, userName) => {
 
       // Use existing socket or create new one
       if (globalSocket && globalSocket.connected) {
-        console.log('✅ Using existing socket connection');
         return;
       }
 
       // Create new socket
-      console.log('🔌 Creating new Socket.IO connection...');
-      
       const socket = io(SOCKET_URL, {
         transports: ['websocket'],
         reconnection: false,
@@ -233,8 +214,6 @@ export const useWebRTC = (meetingId, userId, userName) => {
       globalSocket = socket;
 
       socket.on('connect', () => {
-        console.log('✅ Socket connected:', socket.id);
-        
         // Join the meeting ONLY ONCE
         socket.emit('webrtc-join-meeting', {
           meetingId,
@@ -254,8 +233,6 @@ export const useWebRTC = (meetingId, userId, userName) => {
 
       // Handle existing participants
       socket.on('existing-participants', (participants) => {
-        console.log('📋 Existing participants:', participants.length);
-        
         participants.forEach((participant) => {
           createPeerConnection(participant, true);
         });
@@ -263,14 +240,11 @@ export const useWebRTC = (meetingId, userId, userName) => {
 
       // Handle new user joined
       socket.on('user-joined', (participant) => {
-        console.log('👤 User joined:', participant.userName);
         createPeerConnection(participant, false);
       });
 
       // Handle WebRTC offer
       socket.on('offer', async ({ from, offer }) => {
-        console.log('📥 Received offer from:', from);
-        
         const peer = peersRef.current[from];
         if (peer) {
           try {
@@ -283,8 +257,6 @@ export const useWebRTC = (meetingId, userId, userName) => {
 
       // Handle WebRTC answer
       socket.on('answer', async ({ from, answer }) => {
-        console.log('📥 Received answer from:', from);
-        
         const peer = peersRef.current[from];
         if (peer) {
           try {
@@ -309,8 +281,6 @@ export const useWebRTC = (meetingId, userId, userName) => {
 
       // Handle user left
       socket.on('user-left', ({ socketId }) => {
-        console.log('👋 User left:', socketId);
-        
         if (peersRef.current[socketId]) {
           peersRef.current[socketId].destroy();
           delete peersRef.current[socketId];
@@ -339,8 +309,6 @@ export const useWebRTC = (meetingId, userId, userName) => {
 
     // Cleanup function
     return () => {
-      console.log('🧹 Cleaning up component...');
-      
       isMountedRef.current = false;
       hasJoinedRef.current = false;
 
@@ -362,8 +330,6 @@ export const useWebRTC = (meetingId, userId, userName) => {
   // Cleanup on page unload
   useEffect(() => {
     const handleBeforeUnload = () => {
-      console.log('🧹 Page unloading - cleaning up global resources...');
-      
       // Close socket
       if (globalSocket) {
         if (globalSocket.connected) {

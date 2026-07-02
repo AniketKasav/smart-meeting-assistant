@@ -86,7 +86,6 @@ export function useWakeWord({ onWake, enabled = true } = {}) {
 
     // ── Check mic lock — if someone else owns it, wait and retry ──────────
     if (!micLock.canAcquire("wakeword")) {
-      console.log("[WakeWord] Mic locked by", micLock.owner, "— will retry");
       restartTimerRef.current = setTimeout(startWakeWordListener, 800);
       return;
     }
@@ -104,7 +103,6 @@ export function useWakeWord({ onWake, enabled = true } = {}) {
       startingRef.current = false;
       micLock.acquire("wakeword");
       setIsActive(true);
-      console.log("[WakeWord] Active");
     };
 
     rec.onresult = (event) => {
@@ -183,7 +181,6 @@ export function useWakeWord({ onWake, enabled = true } = {}) {
         restartTimerRef.current = setTimeout(startWakeWordListener, 600);
       } else {
         // Wait for lock to be released then retry
-        console.log("[WakeWord] Mic busy on end — waiting for release");
         const unsub = micLock.subscribe((newOwner) => {
           if (newOwner === null) {
             unsub();
@@ -230,7 +227,6 @@ export function useWakeWord({ onWake, enabled = true } = {}) {
     suspendedRef.current = true;
     setIsSuspended(true);
     destroyRecognition();
-    console.log("[WakeWord] Suspended");
   }, [destroyRecognition]);
 
   // ── resume: re-enable and restart listener ─────────────────────────────────
@@ -238,13 +234,10 @@ export function useWakeWord({ onWake, enabled = true } = {}) {
     if (!suspendedRef.current) return;
     suspendedRef.current = false;
     setIsSuspended(false);
-    console.log("[WakeWord] Resuming");
-
     // Only start if mic is actually free
     if (micLock.canAcquire("wakeword")) {
       restartTimerRef.current = setTimeout(startWakeWordListener, 800);
     } else {
-      console.log("[WakeWord] Mic busy on resume — waiting for release");
       const unsub = micLock.subscribe((newOwner) => {
         if (newOwner === null) {
           unsub();

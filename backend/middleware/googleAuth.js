@@ -36,7 +36,6 @@ function loadTokens() {
 function saveTokens(tokens) {
   try {
     fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens, null, 2));
-    console.log('✅ Tokens saved');
   } catch (error) {
     console.error('Error saving tokens:', error);
   }

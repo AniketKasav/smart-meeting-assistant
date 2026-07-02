@@ -5,8 +5,6 @@ const connectDB = async () => {
   try {
     const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/smart-meeting-assistant';
     
-    console.log('🔄 Connecting to MongoDB...');
-    
     const conn = await mongoose.connect(mongoURI, {
       serverSelectionTimeoutMS: 10000, // 10 second timeout
       socketTimeoutMS: 45000,
@@ -30,7 +28,6 @@ const connectDB = async () => {
     });
 
     mongoose.connection.on('reconnected', () => {
-      console.log('✅ MongoDB reconnected successfully');
     });
 
     return conn;

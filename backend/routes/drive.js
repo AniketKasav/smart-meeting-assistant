@@ -20,8 +20,6 @@ router.post('/search', authenticateToken, requireGoogleAuth, async (req, res) =>
       });
     }
 
-    console.log('🔍 Drive search:', query);
-
     const result = await driveService.searchFiles(query, maxResults);
 
     res.json(result);
@@ -94,8 +92,6 @@ router.post('/upload', authenticateToken, requireGoogleAuth, async (req, res) =>
       });
     }
 
-    console.log('📤 Uploading to Drive:', fileName);
-
     const result = await driveService.uploadFile(filePath, fileName, mimeType, folderId);
 
     res.json(result);
@@ -123,8 +119,6 @@ router.post('/:fileId/share', authenticateToken, requireGoogleAuth, async (req, 
         error: 'Email is required'
       });
     }
-
-    console.log('🔗 Sharing file with:', email);
 
     const result = await driveService.shareFile(fileId, email, role);
 

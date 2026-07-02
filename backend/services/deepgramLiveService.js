@@ -185,8 +185,6 @@ function startDeepgramLive(socket, meetingId, language = "en") {
         }
 
         if (isFinal || speechFinal) {
-          console.log(`✅ Final (${detectedLanguage}): ${transcript}`);
-
           socket.emit("live-transcript", {
             type: "final",
             text: transcript,
@@ -214,7 +212,6 @@ function startDeepgramLive(socket, meetingId, language = "en") {
                   duration: 0,
                   userName: socket.data?.userName || "Unknown",
                 });
-                console.log("📝 Created new live transcript document");
               }
             }
 
@@ -255,7 +252,6 @@ function startDeepgramLive(socket, meetingId, language = "en") {
       }
 
       if (data.metadata) {
-        console.log("ℹ️ Deepgram metadata:", JSON.stringify(data.metadata));
       }
 
       if (data.error) {

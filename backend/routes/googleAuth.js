@@ -31,8 +31,6 @@ router.get('/google/callback', async (req, res) => {
     // Save tokens
     saveTokens(tokens);
 
-    console.log('✅ Google authentication successful');
-
     // Redirect to frontend
     res.send(`
       <html>

@@ -20,8 +20,6 @@ router.post('/search', authenticateToken, requireGoogleAuth, async (req, res) =>
       });
     }
 
-    console.log('🔍 Gmail search:', query);
-
     const result = await gmailService.searchEmails(query, maxResults);
 
     res.json(result);
@@ -48,8 +46,6 @@ router.post('/send', authenticateToken, requireGoogleAuth, async (req, res) => {
         error: 'To, subject, and body are required'
       });
     }
-
-    console.log('📧 Sending email to:', to);
 
     const result = await gmailService.sendEmail(to, subject, body);
 

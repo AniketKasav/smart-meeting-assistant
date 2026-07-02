@@ -334,9 +334,6 @@ router.put("/:meetingId/:itemId", async (req, res) => {
       const assigneeUser = await User.findById(userId).select('name email').lean().catch(() => null);
       const completedByName = assigneeUser?.name || item.assignee || 'A team member';
 
-      console.log(`🔔 Action item "${updatedItem.title}" marked completed by ${completedByName}`);
-      console.log(`🔍 Looking up host — stored userId: "${meeting.host.userId}", name: "${meeting.host.name}"`);
-
       try {
         let hostUser = null;
 
@@ -363,7 +360,6 @@ router.put("/:meetingId/:itemId", async (req, res) => {
         }
 
         if (hostUser?.email) {
-          console.log(`👤 Host found: ${hostUser.name} <${hostUser.email}>`);
           // Fire-and-forget — don't block the HTTP response
           sendActionItemCompletedEmail({
             hostEmail: hostUser.email,

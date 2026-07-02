@@ -200,7 +200,6 @@ class ContextManager {
       const result = await Conversation.deleteMany({
         expiresAt: { $lt: new Date() }
       });
-      console.log(`Cleaned up ${result.deletedCount} expired conversations`);
       return result.deletedCount;
     } catch (error) {
       console.error('Error cleaning up conversations:', error);

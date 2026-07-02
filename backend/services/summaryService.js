@@ -4,8 +4,6 @@ const Groq = require("groq-sdk");
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const MODEL = "llama-3.1-8b-instant";
 
-console.log("✅ Using Groq for AI summaries");
-
 // ── Filter garbage text from failed Vosk/browser recognition ─────────────────
 function cleanTranscriptText(transcriptText) {
   const garbagePattern = /[ğχ÷ùÙâÞğ=\"#Verfüg]/;
@@ -61,8 +59,6 @@ async function callGemini(prompt) {
 // ── generateSummary ───────────────────────────────────────────────────────────
 async function generateSummary(transcriptText, participants = []) {
   try {
-    console.log("🤖 Starting AI summary generation with Groq...");
-
     const cleanedText = cleanTranscriptText(transcriptText);
 
     if (!cleanedText) {
@@ -128,7 +124,6 @@ Respond with ONLY the JSON object, no other text.`;
     summaryData.model = MODEL;
     summaryData.provider = "groq";
 
-    console.log("✅ Summary generated successfully");
     console.log(
       `📊 Stats: ${summaryData.keyPoints?.length || 0} key points, ${summaryData.actionItems?.length || 0} action items`,
     );
@@ -156,8 +151,6 @@ Respond with ONLY the JSON object, no other text.`;
 // ── regenerateSummary ─────────────────────────────────────────────────────────
 async function regenerateSummary(transcriptText, participants, customPrompt) {
   try {
-    console.log("🔄 Regenerating summary with custom prompt...");
-
     const cleanedText = cleanTranscriptText(transcriptText);
     const truncatedText = (cleanedText || transcriptText).slice(0, 6000);
 
@@ -188,8 +181,6 @@ Respond with ONLY the JSON object.`;
     summaryData.provider = "groq";
     summaryData.customPrompt = customPrompt;
 
-    console.log("✅ Summary regenerated successfully");
-
     return summaryData;
   } catch (error) {
     console.error("❌ Error regenerating summary:", error);
@@ -200,8 +191,6 @@ Respond with ONLY the JSON object.`;
 // ── analyzeSentimentOnly ──────────────────────────────────────────────────────
 async function analyzeSentimentOnly(transcriptText) {
   try {
-    console.log("🎭 Analyzing sentiment automatically...");
-
     const cleanedText = cleanTranscriptText(transcriptText);
     const truncatedText = (cleanedText || transcriptText).slice(0, 3000);
 
@@ -258,10 +247,8 @@ async function checkGeminiStatus() {
       messages: [{ role: "user", content: "ping" }],
       max_tokens: 5,
     });
-    console.log("✅ Groq is reachable");
     return true;
   } catch (error) {
-    console.log("❌ Groq unreachable:", error.message);
     return false;
   }
 }

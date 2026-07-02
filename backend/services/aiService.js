@@ -10,14 +10,11 @@ class AIService {
   constructor() {
     this.model = MODEL;
     this.systemPrompt = SYSTEM_PROMPT;
-    console.log("🤖 AI Service initialized with Groq");
   }
 
   // ── Shared helper: call Groq and parse JSON response ─────────────────────
   async callGemini(prompt) {
     try {
-      console.log("🤖 Calling Groq...");
-
       const completion = await groq.chat.completions.create({
         model: MODEL,
         messages: [{ role: "user", content: prompt }],
@@ -36,8 +33,6 @@ class AIService {
       // Extract first {...} block
       const jsonMatch = clean.match(/\{[\s\S]*\}/);
       if (jsonMatch) clean = jsonMatch[0];
-
-      console.log("🤖 Groq raw response:", clean.substring(0, 200));
 
       try {
         return JSON.parse(clean);
@@ -265,7 +260,6 @@ Return ONLY valid JSON:
         }
       }
 
-      console.log("📦 Final extracted params:", response);
       return response || {};
     } catch (error) {
       console.error("Parameter extraction error:", error);
@@ -398,8 +392,6 @@ Return ONLY valid JSON:
     userContext = {},
   ) {
     try {
-      console.log(`📥 Processing input from user ${userId}: "${userMessage}"`);
-
       const currentContext = await contextManager.getCurrentContext(userId);
 
       if (
@@ -407,7 +399,6 @@ Return ONLY valid JSON:
         currentContext.intent &&
         !currentContext.isComplete
       ) {
-        console.log("🔄 Continuing multi-turn conversation");
         const multiTurnResult = await this.handleMultiTurn(
           userId,
           userMessage,
@@ -454,8 +445,6 @@ Return ONLY valid JSON:
       };
 
       if (parsedResponse.needsMoreInfo && parsedResponse.clarification) {
-        console.log("🔄 Starting multi-turn conversation");
-
         const missingParams = this.getMissingParams(
           parsedResponse.intent,
           parsedResponse.params,
@@ -473,8 +462,6 @@ Return ONLY valid JSON:
         parsedResponse.multiTurn = true;
         parsedResponse.isComplete = false;
       }
-
-      console.log("✅ AI processing complete:", parsedResponse.intent);
 
       return {
         success: true,
@@ -507,7 +494,6 @@ Return ONLY valid JSON:
   ) {
     try {
       if (!currentContext || !currentContext.intent) {
-        console.log("⚠️ No active multi-turn context, starting fresh");
         return null;
       }
 
@@ -515,17 +501,11 @@ Return ONLY valid JSON:
       const collectedParams = { ...(currentContext.collectedParams || {}) };
       const pendingParams = [...(currentContext.pendingParams || [])];
 
-      console.log(`🔄 Multi-turn for ${intent}, step ${currentContext.step}`);
-      console.log("📝 Current collected params:", collectedParams);
-      console.log("❓ Pending params:", pendingParams);
-
       const extractedParams = await this.extractParameters(
         userMessage,
         intent,
         currentContext,
       );
-      console.log("✨ Newly extracted params:", extractedParams);
-
       // Smart merge - only overwrite non-null new values
       for (const key in extractedParams) {
         const newValue = extractedParams[key];
@@ -548,11 +528,7 @@ Return ONLY valid JSON:
         }
       }
 
-      console.log("✅ Merged params:", collectedParams);
-
       const stillMissing = this.getMissingParams(intent, collectedParams);
-      console.log("❓ Still missing:", stillMissing);
-
       if (stillMissing.length > 0) {
         const nextParam = stillMissing[0];
         const question = this.getFollowUpQuestion(intent, nextParam);
@@ -580,8 +556,6 @@ Return ONLY valid JSON:
           pendingParams: stillMissing,
         };
       }
-
-      console.log("✅ All params collected:", collectedParams);
 
       await contextManager.clearContext(userId);
 
@@ -683,8 +657,6 @@ Return ONLY valid JSON:
         };
       }
 
-      console.log("🔍 Parsed search params:", response);
-
       return {
         success: true,
         ...response,
@@ -756,8 +728,6 @@ Return ONLY valid JSON:
 
       const response = await this.callGemini(prompt);
 
-      console.log("📝 Generated summary for meeting:", meetingId);
-
       return {
         success: true,
         summary: {
@@ -808,8 +778,6 @@ Return ONLY valid JSON:
 }`;
 
       const response = await this.callGemini(prompt);
-
-      console.log("📦 Parsed bulk command:", response);
 
       return {
         success: true,

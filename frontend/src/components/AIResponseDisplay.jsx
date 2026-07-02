@@ -72,7 +72,6 @@ const AIResponseDisplay = ({
       
       if (response.data.success) {
         setFeedbackSubmitted(true);
-        console.log('✅ Feedback submitted:', type);
       }
     } catch (error) {
       console.error('Failed to submit feedback:', error);

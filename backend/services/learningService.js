@@ -204,8 +204,6 @@ class LearningService {
         .limit(100)
         .lean();
 
-      console.log(`📚 Processing ${unprocessed.length} feedback items...`);
-
       // Analyze patterns
       const patterns = this.analyzeFeedbackPatterns(unprocessed);
 
@@ -214,8 +212,6 @@ class LearningService {
         { processed: false },
         { $set: { processed: true } }
       );
-
-      console.log('✅ Feedback processed successfully');
 
       return {
         success: true,

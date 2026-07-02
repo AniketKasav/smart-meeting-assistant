@@ -103,7 +103,6 @@ export const useSpeechRecognition = (options = {}) => {
       recognitionRef.current.maxAlternatives = maxAlternatives;
 
       recognitionRef.current.onstart = () => {
-        console.log(`🎤 Speech recognition started [${resolvedLanguage}]`);
         setIsListening(true);
         setError(null);
         setTranscript("");
@@ -148,7 +147,6 @@ export const useSpeechRecognition = (options = {}) => {
       };
 
       recognitionRef.current.onend = () => {
-        console.log("🛑 Speech recognition ended");
         setIsListening(false);
         onEndRef.current?.();
       };

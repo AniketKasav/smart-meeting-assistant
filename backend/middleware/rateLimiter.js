@@ -13,7 +13,6 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: false, // Count successful requests
   handler: (req, res) => {
-    console.log(`🚫 Rate limit exceeded for IP: ${req.ip}`);
     res.status(429).json({
       error: 'Too many login attempts',
       message: 'Please try again after 15 minutes',
@@ -33,7 +32,6 @@ const registerLimiter = rateLimit({
   validate: { trustProxy: false },
   legacyHeaders: false,
   handler: (req, res) => {
-    console.log(`🚫 Registration rate limit exceeded for IP: ${req.ip}`);
     res.status(429).json({
       error: 'Too many registration attempts',
       message: 'Please try again after 1 hour',
@@ -53,7 +51,6 @@ const passwordResetLimiter = rateLimit({
   validate: { trustProxy: false },
   legacyHeaders: false,
   handler: (req, res) => {
-    console.log(`🚫 Password reset rate limit exceeded for IP: ${req.ip}`);
     res.status(429).json({
       error: 'Too many password reset requests',
       message: 'Please try again after 1 hour',
@@ -73,7 +70,6 @@ const apiLimiter = rateLimit({
   validate: { trustProxy: false },
   legacyHeaders: false,
   handler: (req, res) => {
-    console.log(`🚫 API rate limit exceeded for IP: ${req.ip}`);
     res.status(429).json({
       error: 'Too many requests',
       message: 'Please try again after 15 minutes',
@@ -93,7 +89,6 @@ const strictLimiter = rateLimit({
   validate: { trustProxy: false },
   legacyHeaders: false,
   handler: (req, res) => {
-    console.log(`🚫 Strict rate limit exceeded for IP: ${req.ip}`);
     res.status(429).json({
       error: 'Too many requests',
       message: 'Please wait 1 minute before trying again',

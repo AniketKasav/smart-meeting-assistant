@@ -293,7 +293,6 @@ const MeetingRoom = () => {
 
     try {
       recognition.start();
-      console.log(`🎤 Web Speech API started — lang: ${browserCode}`);
     } catch (err) {
       console.error("❌ Failed to start speech recognition:", err);
       speechRecRef.current = null;
@@ -345,7 +344,6 @@ const MeetingRoom = () => {
       micLock.release("meeting");
     } else if (!fridayAwake && meetingWasSpeechActive.current) {
       meetingWasSpeechActive.current = false;
-      console.log("▶️ [MeetingRoom] FRIDAY done — resuming transcription mic");
       setTimeout(() => {
         if (liveTranscriptionEnabledRef.current) {
           startSpeechRecognition(transcriptionLanguageRef.current);
@@ -389,8 +387,6 @@ const MeetingRoom = () => {
           });
 
           globalSocket.on("connect", () => {
-            console.log("✅ Socket connected:", globalSocket.id);
-
             globalSocket.emit("webrtc-join-meeting", {
               meetingId,
               userId,
@@ -459,7 +455,6 @@ const MeetingRoom = () => {
           globalSocket.on("force-leave", () => cleanupAndNavigate());
 
           globalSocket.on("live-transcript-translation", (data) => {
-            console.log("🌐 Live translation received:", data);
             setLiveTranslations((prev) => ({
               ...prev,
               [data.originalText]: data.translatedText,
@@ -782,8 +777,6 @@ const MeetingRoom = () => {
           });
           const result = await res.json();
           if (result.success)
-            console.log(`✅ WAV chunk ${currentChunkIndex} uploaded`);
-
           recordingBuffer = [];
           recordingLength = 0;
         } catch (err) {
@@ -802,7 +795,6 @@ const MeetingRoom = () => {
       window.meetingSource = source;
       window.processRemainingAudio = processAudioChunk;
 
-      console.log("✅ Recording started for user:", userName);
     } catch (err) {
       console.error("❌ Recording initialization error:", err);
     }

@@ -54,8 +54,6 @@ async function checkDiarizationAvailable() {
 router.post("/:meetingId/run", async (req, res) => {
   try {
     const { meetingId } = req.params;
-    console.log("[diarization] Request for meeting:", meetingId);
-
     // ✅ Check availability first — return graceful response if blocked
     const available = await checkDiarizationAvailable();
     if (!available) {
@@ -87,11 +85,8 @@ router.post("/:meetingId/run", async (req, res) => {
     }
 
     if (!transcript) {
-      console.log("[diarization] Transcript not found");
       return res.status(404).json({ error: "Transcript not found" });
     }
-
-    console.log("[diarization] Found transcript for:", transcript.meetingId);
 
     // ✅ Construct audioPath if missing
     let audioPath = transcript.audioPath;
@@ -115,7 +110,6 @@ router.post("/:meetingId/run", async (req, res) => {
       for (const possiblePath of possiblePaths) {
         if (fs.existsSync(possiblePath)) {
           audioPath = possiblePath;
-          console.log("[diarization] Found audio file at:", audioPath);
           transcript.audioPath = audioPath;
           await transcript.save();
           break;
@@ -135,7 +129,6 @@ router.post("/:meetingId/run", async (req, res) => {
           );
           if (audioFile) {
             audioPath = path.join(uploadsDir, audioFile);
-            console.log("[diarization] Found audio file:", audioFile);
             transcript.audioPath = audioPath;
             await transcript.save();
           }
@@ -157,8 +150,6 @@ router.post("/:meetingId/run", async (req, res) => {
         path: audioPath,
       });
     }
-
-    console.log("[diarization] Using audio file:", audioPath);
 
     // 2️⃣ Safely derive transcript.json path
     const transcriptFilePath = path.join(
@@ -191,7 +182,6 @@ router.post("/:meetingId/run", async (req, res) => {
     py.stdout.on("data", (data) => {
       const message = data.toString();
       outputBuffer += message;
-      console.log("[diarization]", message.trim());
     });
 
     py.stderr.on("data", (data) => {
@@ -215,8 +205,6 @@ router.post("/:meetingId/run", async (req, res) => {
     py.on("close", async (code) => {
       if (processCompleted || res.headersSent) return;
       processCompleted = true;
-
-      console.log("[diarization] Process closed with code:", code);
 
       if (code !== 0) {
         console.error(
@@ -263,7 +251,6 @@ router.post("/:meetingId/run", async (req, res) => {
         transcript.segments = updated.transcript;
         await transcript.save();
 
-        console.log("[diarization] ✅ Saved diarized segments to database");
         res.json({ success: true });
       } catch (err) {
         console.error("[diarization] Error saving results:", err);

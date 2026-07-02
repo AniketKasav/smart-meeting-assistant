@@ -32,7 +32,6 @@ export const micLock = {
     }
     if (_owner !== requester) {
       _owner = requester;
-      console.log(`[MicLock] 🔒 ${requester} acquired`);
       _notify();
     }
     return true;
@@ -42,7 +41,6 @@ export const micLock = {
   release(requester) {
     if (_owner !== requester) return;
     _owner = null;
-    console.log(`[MicLock] 🔓 ${requester} released`);
     _notify();
   },
 
@@ -51,7 +49,6 @@ export const micLock = {
     const prev = _owner;
     _owner = null;
     if (prev) {
-      console.log(`[MicLock] ⚡ Force released (was: ${prev})`);
       _notify();
     }
   },

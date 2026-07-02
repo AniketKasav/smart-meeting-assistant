@@ -243,11 +243,7 @@ STRICT RULES:
 // ============================================
 async function generateChatResponseStream(userQuery, conversationHistory = [], onChunk) {
   try {
-    console.log('🤖 Processing (stream):', userQuery);
-
     const intent = detectIntent(userQuery);
-    console.log('🎯 Intent:', intent);
-
     const { context, sources } = await buildMeetingContext(userQuery, intent);
 
     const historyText = conversationHistory
@@ -282,11 +278,7 @@ async function generateChatResponseStream(userQuery, conversationHistory = [], o
 // ============================================
 async function generateChatResponse(userQuery, conversationHistory = []) {
   try {
-    console.log('🤖 Processing:', userQuery);
-
     const intent = detectIntent(userQuery);
-    console.log('🎯 Intent:', intent);
-
     const { context, sources } = await buildMeetingContext(userQuery, intent);
 
     const historyText = conversationHistory
@@ -316,8 +308,6 @@ async function generateChatResponse(userQuery, conversationHistory = []) {
 
     const data = await response.json();
     const aiResponse = data.response.trim();
-
-    console.log('✅ Response generated');
 
     return { response: aiResponse, sources: sources.slice(0, 3), hasContext: true };
 

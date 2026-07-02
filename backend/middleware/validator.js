@@ -140,8 +140,6 @@ const validate = (schemaName) => {
         message: detail.message
       }));
 
-      console.log('❌ Validation failed:', errors);
-
       return res.status(400).json({
         error: 'Validation failed',
         details: errors
@@ -150,7 +148,6 @@ const validate = (schemaName) => {
 
     // Replace req.body with validated and sanitized data
     req.body = value;
-    console.log('✅ Validation passed for:', schemaName);
     next();
   };
 };

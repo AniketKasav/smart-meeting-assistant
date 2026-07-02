@@ -68,7 +68,6 @@ router.get('/:meetingId/pdf', async (req, res) => {
     }
 
     // Generate PDF
-    console.log('🔄 Generating PDF for meeting:', meeting.meetingId);
     const pdfBuffer = await generateMeetingPDF(meeting, transcripts);
 
     // Send PDF
@@ -77,8 +76,6 @@ router.get('/:meetingId/pdf', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length', pdfBuffer.length);
     res.send(pdfBuffer);
-
-    console.log('✅ PDF generated successfully');
 
   } catch (error) {
     console.error('❌ PDF generation error:', error);

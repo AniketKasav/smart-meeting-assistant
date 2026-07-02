@@ -21,7 +21,6 @@ const ForgotPassword = () => {
       setEmailSent(true);
       // For development: log reset URL (no alert or redirect)
       if (res.data.resetUrl) {
-        console.log('🔗 Reset URL:', res.data.resetUrl);
       }
     } catch (err) {
       setError('Failed to send reset link. Please try again.');

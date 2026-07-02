@@ -238,13 +238,9 @@ const upload = multer({
 connectDB();
 
 // ✅ Authentication Routes
-console.log("✅ Auth routes loaded");
-
 app.use("/api/auth", authRoutes);
 app.use("/api/log-error", logErrorRouter);
 app.use("/api/debug", debugRouter);
-console.log("✅ Auth routes registered");
-
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, timestamp: Date.now(), db: "connected" });
 });
@@ -354,8 +350,6 @@ app.post("/api/upload-chunk", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    console.log(`📦 WAV Chunk ${chunkIndex} received: ${audioFile.size} bytes`);
-
     // Create meeting directory
     const meetingDir = path.join(__dirname, "uploads", meetingId);
     await fs.ensureDir(meetingDir);
@@ -365,8 +359,6 @@ app.post("/api/upload-chunk", upload.single("file"), async (req, res) => {
     await fs.move(audioFile.path, chunkPath, { overwrite: true });
 
     const stats = await fs.stat(chunkPath);
-    console.log(`✅ WAV Chunk ${chunkIndex} saved: ${stats.size} bytes`);
-
     res.json({
       success: true,
       filePath: chunkPath,
@@ -388,8 +380,6 @@ app.post("/api/process-recording", async (req, res) => {
       return res.status(400).json({ error: "meetingId required" });
     }
 
-    console.log(`🔄 Processing recording for meeting ${meetingId}`);
-
     const meetingDir = path.join(__dirname, "uploads", meetingId);
 
     if (!(await fs.pathExists(meetingDir))) {
@@ -410,14 +400,10 @@ app.post("/api/process-recording", async (req, res) => {
       return res.status(400).json({ error: "No audio chunks found" });
     }
 
-    console.log(`📦 Found ${chunks.length} WAV chunks to combine`);
-
     const outputWavPath = path.join(meetingDir, "audio.wav");
 
     try {
       // ✅ Combine WAV chunks (simple binary concatenation)
-      console.log("🔗 Combining WAV chunks...");
-
       const chunkPaths = chunks.map((c) => path.join(meetingDir, c));
 
       // Read first chunk (includes WAV header)
@@ -449,7 +435,6 @@ app.post("/api/process-recording", async (req, res) => {
       await fs.writeFile(outputWavPath, combinedBuffer);
 
       const stats = await fs.stat(outputWavPath);
-      console.log(`✅ Combined WAV created: ${stats.size} bytes`);
       console.log(
         `   Duration: ~${Math.floor(totalDataSize / (16000 * 2))} seconds`,
       );
@@ -461,28 +446,18 @@ app.post("/api/process-recording", async (req, res) => {
       });
     }
 
-    console.log("✅ Audio processing complete, starting transcription...");
-
     // Start transcription
-    console.log("🎯 Starting AssemblyAI transcription...");
-
     try {
       const { AssemblyAI } = require("assemblyai");
       const aaiClient = new AssemblyAI({
         apiKey: process.env.ASSEMBLYAI_API_KEY,
       });
 
-      console.log("📤 Uploading audio to AssemblyAI...");
       const uploadUrl = await aaiClient.files.upload(outputWavPath);
-      console.log("✅ Audio uploaded:", uploadUrl);
-
       const aaiTranscript = await aaiClient.transcripts.transcribe({
         audio_url: uploadUrl,
         language_detection: true,
       });
-
-      console.log("✅ AssemblyAI transcription complete");
-      console.log(`📝 Words: ${aaiTranscript.words?.length || 0}`);
 
       // Convert AssemblyAI word-level output into segments (same shape as Whisper)
       const whisperSegments = (aaiTranscript.words || []).reduce(
@@ -514,8 +489,6 @@ app.post("/api/process-recording", async (req, res) => {
         { meetingId, processingStatus: "live" },
         { $set: { processingStatus: "completed" } },
       );
-      console.log("✅ Promoted live segments to completed");
-
       let transcript = null;
 
       if (whisperSegments.length > 0) {
@@ -532,7 +505,6 @@ app.post("/api/process-recording", async (req, res) => {
           userName: req.body.userName || "Unknown",
         });
         await transcript.save();
-        console.log("✅ AssemblyAI transcript saved to database");
       } else {
         console.log(
           "⚠️ AssemblyAI produced no words — live segments are the transcript",
@@ -547,14 +519,9 @@ app.post("/api/process-recording", async (req, res) => {
       } else {
         await Meeting.findOneAndUpdate({ meetingId }, { status: "completed" });
       }
-      console.log("✅ Meeting status updated to completed");
-
-      console.log("🧹 Cleaning up individual chunks...");
       for (const chunk of chunks) {
         await fs.unlink(path.join(meetingDir, chunk)).catch(() => {});
       }
-      console.log("✅ Cleanup complete");
-
       res.json({
         success: true,
         audioPath: `/uploads/${meetingId}/audio.wav`,
@@ -595,8 +562,6 @@ app.post("/api/chat", async (req, res) => {
     if (!message || !message.trim()) {
       return res.status(400).json({ error: "Message is required" });
     }
-
-    console.log("💬 Chat request:", message);
 
     // ✅ Just set SSE headers — global CORS middleware handles the rest
     res.setHeader("Content-Type", "text/event-stream");
@@ -663,8 +628,6 @@ const io = new Server(server, {
 
 // Config from env
 const ffprobePath = process.env.FFPROBE_PATH || "ffprobe";
-console.log("Configured ffprobePath =", ffprobePath);
-
 async function ensureUserFolder(meetingId, userId) {
   const dir = path.join(__dirname, "uploads", meetingId, userId);
   await fs.ensureDir(dir);
@@ -712,9 +675,6 @@ function probeDuration(filePath) {
 // ✅ TRANSCRIBE AUDIO FUNCTION
 async function transcribeAudio(audioPath, meetingId) {
   return new Promise((resolve, reject) => {
-    console.log("🎯 Starting Whisper transcription...");
-    console.log("📁 Audio file:", audioPath);
-
     // Call your Python transcription script
     const pythonProcess = spawn("python", [
       path.join(__dirname, "transcribe.py"),
@@ -727,7 +687,6 @@ async function transcribeAudio(audioPath, meetingId) {
 
     pythonProcess.stdout.on("data", (data) => {
       output += data.toString();
-      console.log("🐍 Python:", data.toString().trim());
     });
 
     pythonProcess.stderr.on("data", (data) => {
@@ -761,8 +720,6 @@ async function transcribeAudio(audioPath, meetingId) {
             });
 
             await transcript.save();
-            console.log("✅ Transcript saved to database");
-
             resolve(transcript);
           } else {
             reject(new Error("Transcript file not found"));
@@ -787,8 +744,6 @@ async function runConcatScript(meetingId, userId) {
   }
 
   return new Promise((resolve, reject) => {
-    console.log(`Running: node ${scriptPath} ${meetingId} ${userId}`);
-
     const proc = spawn("node", [scriptPath, meetingId, userId], {
       cwd: __dirname,
       stdio: ["ignore", "pipe", "pipe"],
@@ -800,7 +755,6 @@ async function runConcatScript(meetingId, userId) {
     proc.stdout.on("data", (d) => {
       const txt = d.toString();
       stdout += txt;
-      console.log("[concat]", txt.trim());
     });
 
     proc.stderr.on("data", (d) => {
@@ -817,7 +771,6 @@ async function runConcatScript(meetingId, userId) {
     proc.on("close", (code) => {
       clearTimeout(timeout);
       if (code === 0) {
-        console.log("✅ Concat completed");
         resolve({ stdout, stderr });
       } else {
         reject(new Error(`Concat failed with code ${code}`));
@@ -837,13 +790,11 @@ async function findCombinedAudio(userDir) {
 
   if (await fs.pathExists(wavPath)) {
     const stats = await fs.stat(wavPath);
-    console.log(`Found combined.wav (${stats.size} bytes)`);
     return wavPath;
   }
 
   if (await fs.pathExists(webmPath)) {
     const stats = await fs.stat(webmPath);
-    console.log(`Found combined.webm (${stats.size} bytes)`);
     return webmPath;
   }
 
@@ -858,8 +809,6 @@ async function findCombinedAudio(userDir) {
 app.post("/api/meetings/:meetingId/summary", async (req, res) => {
   try {
     const { meetingId } = req.params;
-    console.log(`🤖 Generating summary for meeting: ${meetingId}`);
-
     // 1. Find the meeting
     const meeting = await Meeting.findOne({ meetingId });
     if (!meeting) {
@@ -908,8 +857,6 @@ app.post("/api/meetings/:meetingId/summary", async (req, res) => {
 
     await meeting.save();
 
-    console.log("✅ Summary saved to database");
-
     res.json({
       success: true,
       summary: meeting.summary,
@@ -929,8 +876,6 @@ app.put("/api/meetings/:meetingId/summary/regenerate", async (req, res) => {
     const { meetingId } = req.params;
     const { customPrompt } = req.body;
 
-    console.log(`🔄 Regenerating summary for meeting: ${meetingId}`);
-
     // Try to find by meetingId field first
     let meeting = await Meeting.findOne({ meetingId });
 
@@ -940,7 +885,6 @@ app.put("/api/meetings/:meetingId/summary/regenerate", async (req, res) => {
     }
 
     if (!meeting) {
-      console.log("❌ Meeting not found:", meetingId);
       return res.status(404).json({ error: "Meeting not found" });
     }
 
@@ -960,8 +904,6 @@ app.put("/api/meetings/:meetingId/summary/regenerate", async (req, res) => {
       .join(" ");
 
     const participants = meeting.participants.map((p) => p.name || "Unknown");
-
-    console.log("📝 Generating new summary with custom prompt...");
 
     // Generate with custom prompt
     const summaryData = await regenerateSummary(
@@ -998,8 +940,6 @@ app.put("/api/meetings/:meetingId/summary/regenerate", async (req, res) => {
     };
 
     await meeting.save();
-
-    console.log("✅ Summary regenerated successfully");
 
     res.json({
       success: true,
@@ -1076,8 +1016,6 @@ app.patch(
 
 // Analytics routes
 app.use("/api/analytics", analyticsRoutes);
-console.log("✅ Analytics routes loaded");
-
 // Action Items routes
 app.use("/api/action-items", actionItemsRoutes);
 
@@ -1103,8 +1041,6 @@ app.use("/api/tasks", taskRoutes);
 // Suggestions routes
 const suggestionsRoutes = require("./routes/suggestions");
 app.use("/api/suggestions", suggestionsRoutes);
-console.log("✅ Suggestions routes loaded");
-
 // Google Auth, Gmail, Drive routes
 app.use("/api/auth", googleAuthRoutes);
 app.use("/api/gmail", gmailRoutes);
@@ -1115,16 +1051,12 @@ app.use("/api/drive", driveRoutes);
 // =====================
 
 io.on("connection", (socket) => {
-  console.log("Socket connected:", socket.id);
-
   socket.on("join-meeting", async ({ meetingId, userId, userName }) => {
     try {
       socket.join(meetingId);
       socket.data.meetingId = meetingId;
       socket.data.userId = userId;
       socket.data.userName = userName || userId;
-
-      console.log(`✅ User ${userName || userId} joined meeting ${meetingId}`);
 
       // Find or create meeting in DB
       let meeting = await Meeting.findOne({ meetingId });
@@ -1146,7 +1078,6 @@ io.on("connection", (socket) => {
           startedAt: new Date(),
         });
         await meeting.save();
-        console.log(`📝 Created new meeting: ${meetingId}`);
       } else {
         // ✅ Only add if not already host or participant
         const isHost = meeting.host?.userId === userId;
@@ -1209,8 +1140,6 @@ io.on("connection", (socket) => {
       );
 
       const stats = await fs.stat(filepath);
-      console.log(`💾 Chunk ${seq}: ${filename} (${stats.size} bytes)`);
-
       socket.emit("chunk-saved", { seq, filename, size: stats.size });
     } catch (err) {
       console.error("❌ Chunk save error:", err);
@@ -1220,8 +1149,6 @@ io.on("connection", (socket) => {
 
   socket.on("recording-stopped", async ({ meetingId, userId }) => {
     const key = makeKey(meetingId, userId);
-
-    console.log(`🛑 Recording stopped: ${userId} in meeting ${meetingId}`);
 
     if (runningConcat.has(key)) {
       socket.emit("concat-already-running");
@@ -1234,7 +1161,6 @@ io.on("connection", (socket) => {
       const userName = socket.data.userName || userId;
 
       // Wait for final chunks
-      console.log("⏳ Waiting for final chunks...");
       socket.emit("processing-log", { msg: "Waiting for final chunks..." });
       await new Promise((r) => setTimeout(r, 2000));
 
@@ -1242,7 +1168,6 @@ io.on("connection", (socket) => {
       const badDir = path.join(userDir, "bad_chunks");
       await fs.ensureDir(badDir);
 
-      console.log("🔍 Validating chunks...");
       socket.emit("processing-log", { msg: "Validating chunks..." });
 
       const files = await fs.readdir(userDir);
@@ -1270,7 +1195,6 @@ io.on("connection", (socket) => {
           }
         } else {
           validWav++;
-          console.log(`✅ WAV OK: ${f} (${st.size}b)`);
         }
       }
 
@@ -1291,11 +1215,9 @@ io.on("connection", (socket) => {
           }
         } else {
           validWebm++;
-          console.log(`✅ WebM OK: ${f} (${dur}s)`);
         }
       }
 
-      console.log(`✅ Validation complete: ${validWav} WAV, ${validWebm} WebM`);
       socket.emit("processing-log", {
         msg: `${validWav + validWebm} valid chunks`,
       });
@@ -1309,8 +1231,6 @@ io.on("connection", (socket) => {
 
       // Run concatenation
       socket.emit("concat-start", { chunks: validWav + validWebm });
-      console.log("🔗 Starting concat...");
-
       await runConcatScript(meetingId, userId);
 
       // Find combined file
@@ -1330,8 +1250,6 @@ io.on("connection", (socket) => {
         audio: audioUrl,
         path: combinedPath,
       });
-
-      console.log(`✅ Concat done: ${combinedFilename}`);
 
       // Update meeting in DB with audio path
       const meeting = await Meeting.findOne({ meetingId });
@@ -1357,8 +1275,6 @@ io.on("connection", (socket) => {
         segments: [], // Initialize with empty array
       });
       await transcript.save();
-      console.log(`📝 Created transcript record: ${transcript._id}`);
-
       // Start transcription
       const pythonExe =
         process.env.PYTHON_PATH ||
@@ -1368,7 +1284,6 @@ io.on("connection", (socket) => {
         ? pythonExe
         : "python";
 
-      console.log("🎤 Starting transcription...");
       socket.emit("transcription-start", { file: combinedPath });
 
       const tproc = spawn(
@@ -1386,7 +1301,6 @@ io.on("connection", (socket) => {
       tproc.stdout.on("data", (d) => {
         const txt = d.toString();
         tOut += txt;
-        console.log("[transcribe]", txt.trim());
         socket.emit("transcription-log", { msg: txt.trim() });
       });
 
@@ -1397,8 +1311,6 @@ io.on("connection", (socket) => {
       });
 
       tproc.on("close", async (code) => {
-        console.log(`Transcription exit code: ${code}`);
-
         const transcriptFile = path.join(userDir, "transcript.json");
 
         if (code !== 0) {
@@ -1492,7 +1404,6 @@ io.on("connection", (socket) => {
           await transcript.save();
 
           // ✅ NEW: Automatically analyze sentiment after transcription
-          console.log("🎭 Starting automatic sentiment analysis...");
           try {
             const {
               analyzeSentimentOnly,
@@ -1547,13 +1458,7 @@ io.on("connection", (socket) => {
             }
 
             await updatedMeeting.save();
-            console.log("✅ Meeting updated to completed status");
           }
-
-          console.log("✅ Transcription complete!");
-          console.log(`   Duration: ${transcriptData.duration}s`);
-          console.log(`   Segments: ${transcriptData.transcript?.length || 0}`);
-          console.log(`   Words: ${transcript.stats.totalWords}`);
 
           socket.emit("transcription-complete", {
             transcript: transcriptData.transcript || [],
@@ -1584,7 +1489,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log("Socket disconnected:", socket.id);
     handleUserLeave(socket);
   });
 
@@ -1596,8 +1500,6 @@ io.on("connection", (socket) => {
   socket.on(
     "webrtc-join-meeting",
     async ({ meetingId, userId, userName, isAudioEnabled, isVideoEnabled }) => {
-      console.log(`📹 ${userName} joining meeting ${meetingId} for WebRTC`);
-
       // Join socket room
       socket.join(meetingId);
 
@@ -1683,8 +1585,6 @@ io.on("connection", (socket) => {
   // WebRTC offer
   socket.on("offer", ({ to, offer }) => {
     const from = socketToUser.get(socket.id);
-    console.log(`📤 Offer from ${from?.userName} to ${to}`);
-
     socket.to(to).emit("offer", {
       from: socket.id,
       offer,
@@ -1694,8 +1594,6 @@ io.on("connection", (socket) => {
   // WebRTC answer
   socket.on("answer", ({ to, answer }) => {
     const from = socketToUser.get(socket.id);
-    console.log(`📥 Answer from ${from?.userName} to ${to}`);
-
     socket.to(to).emit("answer", {
       from: socket.id,
       answer,
@@ -1743,7 +1641,6 @@ io.on("connection", (socket) => {
       socketId: socket.id,
     });
 
-    console.log(`💬 ${userName}: ${message}`);
   });
 
   // Screen sharing started
@@ -1754,7 +1651,6 @@ io.on("connection", (socket) => {
         socketId: socket.id,
         userName: user.userName,
       });
-      console.log(`🖥️ ${user.userName} started screen sharing`);
     }
   });
 
@@ -1765,7 +1661,6 @@ io.on("connection", (socket) => {
       socket.to(meetingId).emit("user-stopped-screen-share", {
         socketId: socket.id,
       });
-      console.log(`🖥️ ${user.userName} stopped screen sharing`);
     }
   });
 
@@ -1802,8 +1697,6 @@ io.on("connection", (socket) => {
           !persistentTranscriptionProcess ||
           persistentTranscriptionProcess.killed
         ) {
-          console.log("🚀 Starting persistent transcription service...");
-
           const pythonExe =
             process.env.PYTHON_PATH ||
             path.join(__dirname, "venv", "Scripts", "python.exe");
@@ -1847,7 +1740,6 @@ io.on("connection", (socket) => {
 
               // Skip non-JSON lines (model loading messages)
               if (!trimmed.startsWith("{")) {
-                console.log(`[realtime] ${trimmed}`);
                 continue;
               }
 
@@ -1886,7 +1778,6 @@ io.on("connection", (socket) => {
           });
 
           persistentTranscriptionProcess.on("close", (code) => {
-            console.log(`[realtime] Process exited with code ${code}`);
             if (code !== 0) {
               console.error(
                 "[realtime] Process crashed! Will restart on next chunk.",
@@ -1970,9 +1861,7 @@ io.on("connection", (socket) => {
           } else {
             // Check if it's actually silence or an error
             if (result.is_silence) {
-              console.log(`⚪ Chunk ${chunkIndex}: silence detected`);
             } else {
-              console.log(`⚪ Chunk ${chunkIndex}: no speech (possibly noise)`);
             }
           }
 
@@ -2003,8 +1892,6 @@ io.on("connection", (socket) => {
 
         // Start VOSK process if not running
         if (!voskProcess || voskProcess.killed) {
-          console.log("🎙️ Starting VOSK live transcription service...");
-
           const pythonExe =
             process.env.PYTHON_PATH ||
             path.join(__dirname, "venv", "Scripts", "python.exe") ||
@@ -2029,7 +1916,6 @@ io.on("connection", (socket) => {
               // Ready signal
               if (txt === "__VOSK_READY__") {
                 voskReady = true;
-                console.log("✅ VOSK is ready");
                 continue;
               }
 
@@ -2044,7 +1930,6 @@ io.on("connection", (socket) => {
                       type: "partial",
                       text: result.text,
                     });
-                    console.log(`📝 VOSK (partial): "${result.text}"`);
                   }
 
                   if (result.type === "final") {
@@ -2069,7 +1954,6 @@ io.on("connection", (socket) => {
                         text: newText,
                       });
 
-                      console.log(`📝 VOSK (final - new): "${newText}"`);
                     }
                   }
                 } catch (err) {
@@ -2176,7 +2060,6 @@ io.on("connection", (socket) => {
         // ✅ FIX: Mongoose won't detect subdocument array mutations without this
         doc.markModified("segments");
         await doc.save();
-        console.log(`✅ Live segment saved (${doc.segments.length} total)`);
         socket.to(meetingId).emit("live-transcript-segment", {
           id: socket.id + "-" + Date.now(),
           text: trimmedText,
@@ -2195,7 +2078,6 @@ io.on("connection", (socket) => {
         .toLowerCase();
 
       if (!langBase || langBase === target) {
-        console.log(`⏭️ No translation needed (${langBase} = ${target})`);
       } else {
         try {
           const LANG_NAMES = {
@@ -2272,7 +2154,6 @@ io.on("connection", (socket) => {
       );
 
       if (assemblyWS && assemblyWS.readyState === 1) {
-        console.log("🔄 Closing previous AssemblyAI connection...");
         assemblyWS.close();
       }
 
@@ -2331,7 +2212,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("stop-live-transcription", () => {
-    console.log("🛑 Stopping AssemblyAI live transcription");
     if (assemblyWS && assemblyWS.readyState === 1) {
       // ✅ v3: just close directly, no JSON termination message needed
       assemblyWS.close(1000, "Session ended by client");
@@ -2366,8 +2246,6 @@ io.on("connection", (socket) => {
 
   // End meeting (host only)
   socket.on("end-meeting", async ({ meetingId }) => {
-    console.log(`🛑 Meeting ${meetingId} ended by host`);
-
     try {
       // ✅ STEP 1: Check if there are audio chunks to process
       const meetingDir = path.join(__dirname, "uploads", meetingId);
@@ -2388,7 +2266,6 @@ io.on("connection", (socket) => {
         hasAudioToProcess = wavChunks.length > 0 && !audioAlreadyProcessed;
 
         if (audioAlreadyProcessed) {
-          console.log("⏭️ Audio already processed, skipping re-processing");
         }
 
         if (hasAudioToProcess) {
@@ -2477,7 +2354,6 @@ io.on("connection", (socket) => {
           );
         }
         await meeting.save();
-        console.log(`✅ Meeting ${meetingId} marked as completed`);
       }
 
       // ✅ STEP 5: Notify all participants (AFTER processing)
@@ -2525,12 +2401,9 @@ function handleUserLeave(socket) {
         userName,
       });
 
-      console.log(`👋 ${userName} left meeting ${meetingId}`);
-
       // Clean up empty rooms
       if (meetingRooms.get(meetingId).size === 0) {
         meetingRooms.delete(meetingId);
-        console.log(`🗑️ Room ${meetingId} deleted (empty)`);
       }
     }
 
@@ -2613,8 +2486,6 @@ app.get("/api/meetings/:meetingId", async (req, res) => {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    console.log("📥 Fetching meeting:", meetingId);
-
     let meeting = await Meeting.findOne({ meetingId });
 
     if (!meeting && /^[0-9a-fA-F]{24}$/.test(meetingId)) {
@@ -2622,7 +2493,6 @@ app.get("/api/meetings/:meetingId", async (req, res) => {
     }
 
     if (!meeting) {
-      console.log("❌ Meeting not found:", meetingId);
       return res.status(404).json({ error: "Meeting not found" });
     }
 
@@ -2655,9 +2525,6 @@ app.get("/api/meetings/:meetingId", async (req, res) => {
       }
       return transcript;
     });
-
-    console.log("✅ Found meeting:", meeting.title);
-    console.log("📝 Found transcripts:", formattedTranscripts.length);
 
     res.json({
       success: true,
@@ -2776,8 +2643,6 @@ app.delete("/api/meetings/:meetingId", async (req, res) => {
   try {
     const { meetingId } = req.params;
 
-    console.log("🗑️ Deleting meeting:", meetingId);
-
     let meeting = await Meeting.findOne({ meetingId });
 
     if (!meeting && /^[0-9a-fA-F]{24}$/.test(meetingId)) {
@@ -2800,7 +2665,6 @@ app.delete("/api/meetings/:meetingId", async (req, res) => {
     // Delete meeting
     await Meeting.deleteOne({ _id: meeting._id });
 
-    console.log("✅ Meeting deleted:", meeting.meetingId);
     res.json({ success: true, message: "Meeting deleted" });
   } catch (err) {
     console.error("❌ Delete error:", err);

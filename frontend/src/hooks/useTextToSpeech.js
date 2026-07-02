@@ -29,8 +29,6 @@ const useTextToSpeech = () => {
     }
 
     const availableVoices = window.speechSynthesis.getVoices();
-    console.log('🔊 Available voices:', availableVoices.length);
-    
     if (availableVoices.length > 0) {
       setVoices(availableVoices);
       
@@ -42,7 +40,6 @@ const useTextToSpeech = () => {
       ) || availableVoices[0];
       
       setSelectedVoice(englishVoice);
-      console.log('🎤 Selected voice:', englishVoice?.name);
     }
   }, []);
 
@@ -74,7 +71,6 @@ const useTextToSpeech = () => {
       const savedVolume = localStorage.getItem('tts_volume');
       if (savedVolume) setVolume(parseFloat(savedVolume));
       
-      console.log('✅ TTS initialized');
     } else {
       console.error('❌ Speech Synthesis not supported');
     }
@@ -94,7 +90,6 @@ const useTextToSpeech = () => {
     }
 
     if (!isEnabled) {
-      console.log('🔇 TTS is disabled');
       return;
     }
 
@@ -114,8 +109,6 @@ const useTextToSpeech = () => {
       .replace(/\n+/g, '. ')
       .trim();
 
-    console.log('🔊 Speaking:', cleanText.substring(0, 50) + '...');
-
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utteranceRef.current = utterance;
 
@@ -130,13 +123,11 @@ const useTextToSpeech = () => {
 
     // Event handlers
     utterance.onstart = () => {
-      console.log('🔊 Started speaking');
       setIsSpeaking(true);
       setIsPaused(false);
     };
 
     utterance.onend = () => {
-      console.log('✅ Finished speaking');
       setIsSpeaking(false);
       setIsPaused(false);
       utteranceRef.current = null;
@@ -150,12 +141,10 @@ const useTextToSpeech = () => {
     };
 
     utterance.onpause = () => {
-      console.log('⏸️ Paused speaking');
       setIsPaused(true);
     };
 
     utterance.onresume = () => {
-      console.log('▶️ Resumed speaking');
       setIsPaused(false);
     };
 
@@ -218,7 +207,6 @@ const useTextToSpeech = () => {
     const voice = voices.find(v => v.name === voiceName);
     if (voice) {
       setSelectedVoice(voice);
-      console.log('🎤 Voice changed to:', voice.name);
     }
   }, [voices]);
 
