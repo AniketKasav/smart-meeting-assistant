@@ -1,7 +1,7 @@
-// Ollama Configuration
-const OLLAMA_CONFIG = {
-  host: process.env.OLLAMA_HOST || 'http://localhost:11434',
-  model: process.env.OLLAMA_MODEL || 'llama3.2:latest',
+// AI (Groq) Configuration
+const AI_CONFIG = {
+  host: process.env.GROQ_API_KEY || '',
+  model: 'llama-3.1-8b-instant',
   
   // Generation parameters
   options: {
@@ -30,7 +30,7 @@ const getTomorrowDate = () => {
 };
 
 // System prompt for the AI assistant
-const SYSTEM_PROMPT = `You are an intelligent AI assistant for a Smart Meeting Management System.
+const SYSTEM_PROMPT = `You are FRIDAY, an intelligent AI assistant for a Smart Meeting Management System. Your name is FRIDAY and you should refer to yourself as FRIDAY when asked.
 
 CAPABILITIES:
 1. Schedule and manage meetings (dates, times, participants, descriptions)
@@ -353,6 +353,6 @@ Output: {
 }`;
 
 module.exports = {
-  OLLAMA_CONFIG,
+  AI_CONFIG,
   SYSTEM_PROMPT
 };

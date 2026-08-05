@@ -288,26 +288,15 @@ async function generateChatResponse(userQuery, conversationHistory = []) {
 
     const prompt = buildPrompt(intent, userQuery, context, historyText);
 
-    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'llama3.2',
-        prompt,
-        stream: false,
-        options: {
-          temperature: 0.5,
-          top_p: 0.9,
-          num_predict: 500,
-          num_ctx: 4096
-        }
-      })
+    const completion = await groqClient.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.5,
+      max_tokens: 500,
+      stream: false,
     });
 
-    if (!response.ok) throw new Error(`Ollama error: ${response.status}`);
-
-    const data = await response.json();
-    const aiResponse = data.response.trim();
+    const aiResponse = (completion.choices[0]?.message?.content || '').trim();
 
     return { response: aiResponse, sources: sources.slice(0, 3), hasContext: true };
 

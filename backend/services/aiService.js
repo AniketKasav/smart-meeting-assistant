@@ -1,6 +1,6 @@
 // backend/services/aiService.js - Groq (replaces Gemini)
 const Groq = require("groq-sdk");
-const { SYSTEM_PROMPT } = require("../config/ollama.config");
+const { SYSTEM_PROMPT } = require("../config/ai.config");
 const contextManager = require("./contextManager");
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -60,10 +60,11 @@ class AIService {
     }
   }
 
-  // ── keeping callOllama as an alias so any code that calls it still works ───
-  async callOllama(prompt) {
+  // ── callAI routes all prompts through Groq ───────────────────────────────
+  async callAI(prompt) {
     return this.callGemini(prompt);
   }
+
 
   /**
    * Build dynamic prompt with user context and multi-turn state

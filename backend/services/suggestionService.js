@@ -120,7 +120,7 @@ Extract action items in JSON format:
 
 Only include clear, actionable tasks. Return valid JSON.`;
 
-      const result = await aiService.callOllama(prompt);
+      const result = await aiService.callAI(prompt);
       
       const actionItems = result.actionItems || [];
       

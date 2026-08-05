@@ -260,5 +260,5 @@ module.exports = {
   regenerateSummary,
   analyzeSentimentOnly,
   // keep old export name so nothing in server.js breaks
-  checkOllamaStatus: checkGeminiStatus,
+  checkGroqStatus: checkGeminiStatus,
 };

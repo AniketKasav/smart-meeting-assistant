@@ -1995,7 +1995,7 @@ io.on("connection", (socket) => {
   // WEB SPEECH API — SAVE LIVE SEGMENTS
   // ============================================
   // The frontend uses the browser's Web Speech API for live transcription.
-  // Final transcript segments are sent here for DB persistence and Ollama translation.
+  // Final transcript segments are sent here for DB persistence and Groq AI translation.
   socket.on(
     "save-live-segment",
     async ({

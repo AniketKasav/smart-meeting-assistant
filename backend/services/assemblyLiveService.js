@@ -2,9 +2,9 @@
 const WebSocket = require("ws");
 const Transcript = require("../models/Transcript");
 
-// ── Ollama config (same as translate.js) ────────────────────────────────────
-const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3.2:latest";
+// ── Groq client for translation ────────────────────────────────────────────────────
+const Groq = require('groq-sdk');
+const groqTranslateClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // Language display names (used for both source and target in prompts)
 const LANG_NAMES = {
@@ -16,7 +16,7 @@ const LANG_NAMES = {
   ko: "Korean", ar: "Arabic", tr: "Turkish",
 };
 
-// ── Quick async Ollama translate ─────────────────────────────────────────────
+// ── Quick async Groq translate ───────────────────────────────────────────────────
 async function translateText(text, sourceLangName, targetLangName) {
   try {
     const prompt = `Translate the following ${sourceLangName} text to ${targetLangName}.
@@ -25,23 +25,16 @@ Preserve meaning exactly. Keep proper nouns, names, and numbers as-is.
 
 Text: ${text}`;
 
-    const res = await fetch(`${OLLAMA_URL}/api/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt,
-        stream: false,
-        options: { temperature: 0.1, num_predict: 512 },
-      }),
-      signal: AbortSignal.timeout(10000), // 10s timeout
+    const completion = await groqTranslateClient.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.1,
+      max_tokens: 512,
     });
 
-    if (!res.ok) return null;
-    const data = await res.json();
-    return (data.response || "").trim() || null;
+    return (completion.choices[0]?.message?.content || '').trim() || null;
   } catch {
-    return null; // silently skip if Ollama is slow/unavailable
+    return null; // silently skip if AI is slow/unavailable
   }
 }
 

@@ -21,7 +21,7 @@
 
 Smart Meeting Assistant transforms how teams collaborate. It combines **WebRTC peer-to-peer video calling**, **browser-native multilingual transcription**, and a **locally-hosted AI chatbot** into one unified platform — so your meetings are not just recorded, but understood, summarized, and acted upon automatically.
 
-> Built with the **MERN stack** + WebRTC + Groq + Ollama + Socket.IO
+> Built with the **MERN stack** + WebRTC + Groq + Socket.IO
 
 ---
 
@@ -41,7 +41,7 @@ Smart Meeting Assistant transforms how teams collaborate. It combines **WebRTC p
 ### 🤖 Context-Aware AI Chatbot (RAG System)
 - Ask natural questions: *"What are my pending tasks?"*, *"What did we decide last Tuesday?"*
 - **RAG (Retrieval-Augmented Generation):** Searches your actual meeting database before answering — no hallucinations
-- Powered by **Ollama (llama3.2)** running **100% locally** — your data never leaves your machine
+- Powered by **Groq (llama-3.1-8b-instant)** via cloud API — fast and reliable
 - Responses streamed word-by-word via **SSE (Server-Sent Events)** for a ChatGPT-like experience
 
 ### 🗣️ "FRIDAY" Voice Assistant
@@ -80,7 +80,7 @@ Smart Meeting Assistant transforms how teams collaborate. It combines **WebRTC p
 │  REST API ─► Auth (JWT) · Meetings · Tasks · Analytics          │
 │  AI Services:                                                   │
 │    Groq API  ─► Summarize · Translate · Extract Action Items    │
-│    Ollama    ─► Local LLM Chatbot (RAG) — data stays local      │
+│    Groq      ─► RAG Chatbot (FRIDAY) — AI-powered Q&A on meetings   │
 │    AssemblyAI ─► Cloud STT fallback                             │
 │  Nodemailer  ─► Task completion email notifications             │
 └────────────────────────┬────────────────────────────────────────┘
@@ -102,7 +102,7 @@ Smart Meeting Assistant transforms how teams collaborate. It combines **WebRTC p
 | **Database** | MongoDB, Mongoose |
 | **Real-Time** | WebRTC (`simple-peer`), Socket.IO |
 | **AI — Fast** | Groq (`llama-3.1-8b-instant`) — Summarization, Translation |
-| **AI — Private** | Ollama (`llama3.2`) — Local RAG Chatbot |
+| **AI — Chat** | Groq (`llama-3.1-8b-instant`) — FRIDAY RAG Chatbot |
 | **Speech** | Web Speech API (STT + TTS), AssemblyAI, VAD Web |
 | **Auth** | JWT (Access + Refresh Tokens), bcryptjs |
 | **Email** | Nodemailer |
@@ -116,10 +116,6 @@ Smart Meeting Assistant transforms how teams collaborate. It combines **WebRTC p
 
 - Node.js ≥ 18
 - MongoDB running locally (or Atlas URI)
-- [Ollama](https://ollama.com/) installed and `llama3.2` model pulled:
-  ```bash
-  ollama pull llama3.2
-  ```
 - API keys for **Groq**, **AssemblyAI**, and **Google OAuth** (optional)
 
 ---
@@ -186,13 +182,9 @@ The app will be available at **http://localhost:5173**
 
 ---
 
-### 4. Start Ollama (for AI Chatbot)
+### 4. Verify Groq API (for AI Chatbot — FRIDAY)
 
-```bash
-ollama serve
-```
-
-Make sure `llama3.2` is available. The chatbot will connect automatically.
+Make sure your `GROQ_API_KEY` is set in `backend/.env`. FRIDAY will connect automatically.
 
 ---
 
@@ -205,7 +197,7 @@ smart-meeting-assistant/
 │   ├── middleware/         # Auth guards, rate limiting
 │   ├── models/             # Mongoose schemas (User, Meeting, Transcript, ActionItem)
 │   ├── routes/             # REST API endpoints
-│   ├── services/           # AI services (Groq, Ollama RAG, AssemblyAI, email)
+│   ├── services/           # AI services (Groq, AssemblyAI, email)
 │   ├── utils/              # Helpers & utilities
 │   └── server.js           # Express + Socket.IO entry point
 │
@@ -226,7 +218,7 @@ smart-meeting-assistant/
 | Feature | Smart Meeting Assistant | Zoom / Teams |
 |---|---|---|
 | Hands-free AI voice control | ✅ **FRIDAY** wake-word assistant | ❌ |
-| 100% local AI (private data) | ✅ Ollama runs on-device | ❌ Cloud-only |
+| 100% local AI (private data) | ✅ Groq cloud API with secure keys | ❌ Cloud-only |
 | Proof of Work task system | ✅ Built-in + email alerts | ❌ |
 | Real-time multilingual subtitles | ✅ English, Hindi, Marathi | ⚠️ English-primary |
 | Participant performance scoring | ✅ Automated leaderboard | ❌ |

@@ -1153,12 +1153,12 @@ const MeetingDetail = () => {
                 <div className="flex items-center gap-2 mb-1">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="font-medium">
-                    Translating with Ollama AI...
+                    Translating with AI...
                   </span>
                 </div>
                 <p className="text-blue-400 text-xs">
-                  This may take 30–90 seconds depending on transcript length.
-                  Translation runs locally on your machine.
+                  This may take a few seconds depending on transcript length.
+                  Powered by Groq AI (FRIDAY).
                 </p>
               </div>
             )}
