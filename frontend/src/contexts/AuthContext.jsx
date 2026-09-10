@@ -22,13 +22,33 @@ export const AuthProvider = ({ children }) => {
   const checkAuth = async () => {
     const token = localStorage.getItem("accessToken");
     if (token) {
+      // ✅ Pre-check: skip network call if token is already expired locally
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          // Token is expired — clear storage immediately, no network needed
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          setLoading(false);
+          return;
+        }
+      } catch (_) {
+        // Not a valid JWT — clear it
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await axios.get(`${API_URL}/me`, {
           headers: { Authorization: `Bearer ${token}` },
+          timeout: 8000, // ✅ Fail fast — don't hang for 60s on cold-start server
         });
         const userData = res.data;
         setUser({ ...userData, userId: userData._id?.toString() });
       } catch (error) {
+        // If timeout or server error, clear token and show login page
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
       }

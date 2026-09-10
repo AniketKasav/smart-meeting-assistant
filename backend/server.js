@@ -133,6 +133,26 @@ const MONGO_SAFE_LANGS = new Set([
 
 const app = express();
 
+// ✅ Security: Warn loudly if JWT secrets are still default placeholders
+const INSECURE_JWT_DEFAULTS = [
+  'your-super-secret-jwt-key-change-this-in-production',
+  'your-super-secret-refresh-key-change-this-in-production',
+];
+if (
+  INSECURE_JWT_DEFAULTS.includes(process.env.JWT_SECRET) ||
+  INSECURE_JWT_DEFAULTS.includes(process.env.JWT_REFRESH_SECRET)
+) {
+  console.warn(`
+⚠️  ══════════════════════════════════════════════════════════════
+⚠️  SECURITY WARNING: JWT secrets are still set to default values!
+⚠️  Anyone who knows these defaults can forge authentication tokens.
+⚠️  Generate secure secrets with:
+⚠️    node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+⚠️  Then update JWT_SECRET and JWT_REFRESH_SECRET in your .env file.
+⚠️  ══════════════════════════════════════════════════════════════
+  `);
+}
+
 app.use((req, res, next) => {
   const allowed = [
     "https://smart-meeting-assistant-psi.vercel.app",

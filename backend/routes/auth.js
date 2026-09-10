@@ -344,22 +344,12 @@ router.post('/reset-password', passwordResetLimiter, validate('resetPassword'), 
   }
 });
 
-// Error handling middleware
-router.use((err, req, res, next) => {
-  console.error('Auth Route Error:', err);
-  res.status(500).json({ 
-    error: 'Server error', 
-    message: err.message 
-  });
-});
-
-module.exports = router;
-// Test email endpoint
+// ✅ Test email endpoint — must be BEFORE module.exports
 router.get('/test-email', async (req, res) => {
   try {
     const { sendPasswordResetEmail } = require('../services/emailService');
     await sendPasswordResetEmail(
-      'kasavaniket15@gmail.com',  // Your email
+      'kasavaniket15@gmail.com',
       'Test User',
       'test-token-12345'
     );
@@ -373,3 +363,14 @@ router.get('/test-email', async (req, res) => {
     });
   }
 });
+
+// Error handling middleware
+router.use((err, req, res, next) => {
+  console.error('Auth Route Error:', err);
+  res.status(500).json({ 
+    error: 'Server error', 
+    message: err.message 
+  });
+});
+
+module.exports = router;

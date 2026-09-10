@@ -6,8 +6,14 @@ const connectDB = async () => {
     const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/smart-meeting-assistant';
     
     const conn = await mongoose.connect(mongoURI, {
-      serverSelectionTimeoutMS: 10000, // 10 second timeout
-      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: 10000, // 10 second timeout for initial connection
+      socketTimeoutMS: 45000,          // 45s timeout for individual operations
+      connectTimeoutMS: 10000,         // 10s TCP connection timeout
+      // ✅ Connection pool tuning — prevents connection exhaustion on free tier
+      maxPoolSize: 10,                 // max concurrent connections
+      minPoolSize: 2,                  // keep at least 2 alive to avoid cold reconnects
+      // ✅ Keep the connection alive to prevent Atlas idle-timeout disconnects
+      heartbeatFrequencyMS: 10000,     // ping every 10s
     });
 
     console.log(`
@@ -28,6 +34,7 @@ const connectDB = async () => {
     });
 
     mongoose.connection.on('reconnected', () => {
+      console.log('✅ MongoDB reconnected');
     });
 
     return conn;
@@ -44,7 +51,5 @@ const connectDB = async () => {
     return null;
   }
 };
-
-module.exports = connectDB;
 
 module.exports = connectDB;
